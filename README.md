@@ -18,7 +18,9 @@ You need several things to run our program.
 
 3. Install some python packages (for visualizing trees in ccg2lambda) by typing `pip3 install lxml simplejson pyyaml`.
 
-Then you are ready to go. First put your sentence in a file (e.g. test). Then type to parse the sentences using C&C parser:
+Then you are ready to go. 
+
+First put your sentence in a file (e.g. test). Then type to parse the sentences using C&C parser:
 
 ```bash
 ./candcParse_visualize.sh test
@@ -26,11 +28,17 @@ Then you are ready to go. First put your sentence in a file (e.g. test). Then ty
 
 There will be two important output files: *test_candcParsed.html* and *tmp.xml*.
 
-*test_candcParsed.html* is a visualiztion of the parse trees. You can check whether the sentences are parsed correctly.
+- *test_candcParsed.html* is a visualiztion of the parse trees. You can check whether the sentences are parsed correctly.
 
-*tmp.xml* contains the xml format of the parses, which our program work with.
+- *tmp.xml* contains the xml format of the parses, which our program work with.
 
-Now you can run `getMono.py` and get the monotonicity of your sentences. For commandline parameters of this python script, please type `getMono.py -h`
+Now you can run 
+
+```python
+./getMono.py (sentNo) (-vall for verbose, i.e. print the trees)
+``` 
+
+and get the monotonicity of your sentences in STDOUT. For commandline parameters of this python script, please type `./getMono.py -h`
 
 ## TODO
 Add visualization to the final monotonicity output.
