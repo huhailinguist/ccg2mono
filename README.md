@@ -6,8 +6,9 @@ This program takes CCG parses of sentences (from C&C parser) and add monotonicit
 
 For example:
 
-input sentence: No man who likes every dog sleeps. 
-output: No&uarr; man &darr; who &darr; likes &darr; every &darr; dog &uarr; sleeps &darr; . &uarr;
+- input sentence: No man who likes every dog sleeps. 
+
+- output: No&uarr; man&darr; who&darr; likes&darr; every&darr; dog&uarr; sleeps&darr; .&uarr;
 
 ## How to run
 You need several things to run our program.
@@ -20,7 +21,7 @@ You need several things to run our program.
 
 Then you are ready to go. 
 
-First put your sentence in a file (e.g. test). Then type to parse the sentences using C&C parser:
+First put your sentence in a file (e.g. test). Then type the following to parse the sentences using C&C parser:
 
 ```bash
 ./candcParse_visualize.sh test
@@ -28,13 +29,13 @@ First put your sentence in a file (e.g. test). Then type to parse the sentences 
 
 There will be two important output files: *test_candcParsed.html* and *tmp.xml*.
 
-- *test_candcParsed.html* is a visualiztion of the parse trees. You can check whether the sentences are parsed correctly.
+- *test_candcParsed.html* is a visualiztion of the parse trees. You can check whether the sentences are parsed correctly by just using a browser to open the file.
 
 - *tmp.xml* contains the xml format of the parses, which our program work with.
 
 Now you can run 
 
-```python
+```bash
 ./getMono.py (sentNo) (-vall for verbose, i.e. print the trees)
 ``` 
 
@@ -47,12 +48,11 @@ Add visualization to the final monotonicity output.
 ```
 @InProceedings{humoss2018,
   author    = {Hu, Hai and Moss, Lawrence S.},
-  title     = {Polarity Computations in Flexible Categorial Grammar
-},
+  title     = {Polarity Computations in Flexible Categorial Grammar},
   booktitle = {Proceedings of the 7th Joint Conference on Lexical and Computational Semantics (*SEM 2018)},
   year      = {2018},
   address   = {New Orleans, US},
-  publisher = {Association for Computational Linguistics},
+  publisher = {Association for Computational Linguistics}
 }
 ```
 
