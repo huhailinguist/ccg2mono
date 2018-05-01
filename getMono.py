@@ -69,14 +69,18 @@ def main():
 
         t.printSent()
 
-    # print()
-    # for token in t.leafNodes:
-    #     print('word  : {}\ncat   : {}\nsemCat: {}\npos: {}\n'.format(
-    #         token.word, token.cat, token.cat.semCat, token.pos))
-    # print('-'*20)
-    # for token in t.nonTermNodes:
-    #     print('word  : {}\ncat   : {}\nsemCat: {}\nruleType: {}\n'.format(
-    #         'None', token.cat, token.cat.semCat, token.ruleType))
+    # test(trees)
+
+def test(trees):
+    '''  test other constructors of CCGtree: passed  '''
+    t = trees.trees[3]
+    node = t.root.children[0].children[0]
+    # print(node)
+
+    newtree = CCGtree(NonTermNode=node)
+    newtree.printTree()
+    print(newtree.words)
+    print(newtree.wholeStr)
 
 class CCGtrees():
     def __init__(self):
@@ -100,7 +104,7 @@ class CCGtrees():
             
             #### build the tree  ####
             print('building tree {}...'.format(counterSent))
-            tree = CCGtree(ccgXml)
+            tree = CCGtree(ccgXml=ccgXml)
             self.trees[counterSent] = tree
 
         print('\ntrees built!\n\n')
@@ -118,17 +122,85 @@ class CCGtree():
     2. print out the tree
 
     '''
-    def __init__(self, ccgXml=None):
-        self.leafNodes = []; self.words = []
-        self.nonTermNodes = []
+    # def __init__(self, ccgXml=None):
+    def __init__(self, **kwargs):
+        self.leafNodes = []; self.words = []; self.nonTermNodes = []
         self.root = None
-        self.build(ccgXml)
-        self.inferredTrees = []
+        self.allNodes = []  # self.leafNodes + self.nonTermNodes
+
+        # when making tree out of a NonTermNode/LeafNode
+        # wholeStr = 'chased some cat' / 'bird'
+        self.wholeStr = ''
+
+        # all the inferences we can get by using one replacement in a list
+        self.inferences1replace = []  # a list of CCGtrees
+
+        # build tree based on xml
+        if kwargs.get('ccgXml') is not None:
+            self.build(kwargs.get('ccgXml'))
+        elif kwargs.get('NonTermNode') is not None:
+            # build tree from NonTermNode
+            self.root = kwargs.get('NonTermNode')
+            self.buildFromRoot()
+            self.regetDepth()
+        elif kwargs.get('TermNode') is not None:
+            # build tree from LeafNode
+            self.root = kwargs.get('TermNode')
+            self.buildFromRoot()
+            self.regetDepth()
+        else:
+            print('wrong initialization of CCGtree!')
+            exit(1)
+
+    def buildFromRoot(self):
+        self.leafNodes = []
+        self.nonTermNodes = []
+        self.words = []
+        self.buildFromRootHelper(self.root)
+        for lfnode in self.leafNodes:
+            self.words.append(lfnode.word.upper())
+        # fix dummy root
+        dummyRoot = NonTermNode(depth=-1)
+        self.root.sisters = []
+        self.root.parent = dummyRoot
+        dummyRoot.children = [self.root]
+        # fix wholeStr
+        self.getWholeStrAllNodes()
+        self.wholeStr = self.root.wholeStr
+        # allNodes
+        self.allNodes = self.leafNodes + self.nonTermNodes
+
+    def buildFromRootHelper(self, node):
+        if len(node.children) == 0:
+            self.leafNodes.append(node)
+        else:
+            self.nonTermNodes.append(node)
+            for child in node.children:
+                child.parent = node
+                self.buildFromRootHelper(child)
+
+    def getWholeStrAllNodes(self):
+        self.getWholeStrAllNodesHelper(self.root)
+
+    def getWholeStrAllNodesHelper(self, node):
+        if len(node.children) == 0:
+            node.wholeStr = node.word.upper()
+        else:
+            for child in node.children:
+                self.getWholeStrAllNodesHelper(child)
+            node.wholeStr = ' '.join([x.wholeStr for x in node.children]).rstrip()
 
     def printSent(self):
         for lfnode in self.leafNodes:
             print('{} *{}*'.format(lfnode.word, lfnode.cat.monotonicity), end=' ')
         print()
+
+    def __str__(self):
+        return ' '.join(['{} *{}*'.format(lfnode.word, lfnode.cat.monotonicity)
+                         for lfnode in self.leafNodes])
+
+    def __repr__(self):
+        return self.__str__()
 
     def printTree(self):
         self.printTreeHelper(self.root)
@@ -145,6 +217,64 @@ class CCGtree():
         ''' fix most and RC problem '''
         self.fixMost()
         self.fixRC()
+
+    def replacement(self, k):
+        '''  replacement for inference; k is knowledge  '''
+        # print('k.frags.keys():')
+        # print(k.frags.keys())
+        newNode = None
+
+        for ind in range(len(self.allNodes)):
+            node = self.allNodes[ind]
+            # print('***'+node.wholeStr+'***', end='   ')
+            # print('***'+node.cat.monotonicity+'***')
+            if node.wholeStr in k.frags.keys():
+                # replacement for once only!!
+                # get index of node in node.parent.children
+                i = node.parent.children.index(node)
+
+                # TODO check if POS/cat is the same??
+                # check the monotonicity to see whether can replace
+                if (node.cat.monotonicity == 'UP') and (len(k.frags[node.wholeStr].big)!=0):
+                    # replace node with the first thing bigger than it
+                    # print('\nfound a node to replace:', node.wholeStr)
+                    # print('replace it with        :', k.frags[node.wholeStr].big[0].ccgtree.root.wholeStr)
+                    newNode = k.frags[node.wholeStr].big[0].ccgtree.root
+                if (node.cat.monotonicity == 'DOWN') and (len(k.frags[node.wholeStr].small)!=0):
+                    # replace node with the first thing smaller than it
+                    # print('\nfound a node to replace:', node.wholeStr)
+                    # print('replace it with        :', k.frags[node.wholeStr].small[0].ccgtree.root.wholeStr)
+                    newNode = k.frags[node.wholeStr].small[0].ccgtree.root
+
+                if newNode is not None:
+                    # initialize new tree
+                    newTree = copy.deepcopy(self)
+                    newTree.inferences1replace = []
+                    oldNode = newTree.allNodes[ind]  # important: locate the oldNode in newTree
+
+                    # replace oldNode w/ newNode
+                    newNode = copy.deepcopy(newNode)  # newNode is from K, need to make a new instance
+                    oldNode.parent.children[i] = newNode
+                    newNode.parent = oldNode.parent
+                    # fix sister node
+                    if len(newNode.parent.children) > 1:
+                        newNode.parent.children[0].sisters = [newNode.parent.children[1]]
+                        newNode.parent.children[1].sisters = [newNode.parent.children[0]]
+
+                    # rebuild tree
+                    newTree.buildFromRoot()
+                    newTree.regetDepth()
+                    newTree.getPM()
+                    newTree.polarize()
+
+                    # add to inferences1replace
+                    self.inferences1replace.append(newTree)
+
+                    newNode = None
+
+        if len(self.inferences1replace) == 0:
+            newTree = None  # release mem
+            print('Nothing for replacement')
 
     def getPM(self):
         self.getPM_LeafNodes()
@@ -403,6 +533,7 @@ class CCGtree():
                 assert right.cat.semCat.IN.semCatStr == left.cat.semCat.semCatStr
 
                 # --- FOR RELATIVE CLAUSES --- #
+                # TODO: COULD BE DELETED since fixTree() fixes the RC
                 # if X\Y is NP\NP, the RC in English (English RC comes after the head NP)
                 # TODO, ONLY do this for RC, but NOT conjunction!
                 if (right.cat.typeWOfeats == r'NP\NP') and \
@@ -675,8 +806,11 @@ class CCGtree():
 
     def build(self, ccgXml):
         ''' build the tree recursively from xml output of CandC '''
-        self.root = NonTermNode(-1)
+        self.root = NonTermNode(depth=-1)  # dummy root; important
         self.buildHelper(ccgXml, self.root, -1)
+        self.getWholeStrAllNodes()
+        # allNodes
+        self.allNodes = self.leafNodes + self.nonTermNodes
 
     def fixMost(self):
         if 'MOST' not in self.words:
@@ -845,9 +979,10 @@ class CCGtree():
                             print('error removing node from nonTermNodes')
                             pass
 
-                        # sanity check: after the fix, 2 more NonTermNodes
+                        # sanity check: after the fix, 2 more NonTermNodes for each RC
+                        # could have multiple RCs
                         numNonTermNodes_after = len(self.nonTermNodes)
-                        assert numNonTermNodes_before - numNonTermNodes_after == -2
+                        assert (numNonTermNodes_before - numNonTermNodes_after) % 2 == 0
 
                         # recalculate depth
                         self.regetDepth()
@@ -927,6 +1062,7 @@ class LeafNode():
         self.cat = cat; self.chunk = chunk; self.entity = entity
         self.lemma = lemma; self.pos = pos; self.span = span
         self.start = start; self.word = word
+        self.wholeStr = word.upper()
     def copy(self):
         cat = copy.deepcopy(self.cat) # recursively create new copy
         return LeafNode(self.depth,cat,self.chunk,self.entity,self.lemma,
@@ -941,6 +1077,7 @@ class NonTermNode():
         self.parent = None; self.children = []; self.sisters = []
         self.depth = depth
         self.cat = cat; self.ruleType = ruleType
+        self.wholeStr = ''
     def __str__(self):
         return "nt: {} {} {} {} {}".format(self.cat,self.cat.semCat,self.ruleType,self.depth,self.cat.monotonicity)
     def __repr__(self):
