@@ -34,7 +34,7 @@ There will be two important output files: *test_candcParsed.html* and *tmp.xml*.
 
 Now you can run 
 
-```python
+```bash
 ./getMono.py (sentNo) (-vall for verbose, i.e. print the trees)
 ``` 
 
