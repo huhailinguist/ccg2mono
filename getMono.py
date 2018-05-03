@@ -68,6 +68,7 @@ def main():
             t.printTree()
 
         t.printSent()
+        t.printSentLatex()
 
     # test(trees)
 
@@ -133,7 +134,9 @@ class CCGtree():
         self.wholeStr = ''
 
         # all the inferences we can get by using one replacement in a list
-        self.inferences1replace = []  # a list of CCGtrees
+        self.inferences = []  # a list of CCGtrees
+
+        self.numInfTotal = 0  # total num of inferences recursively
 
         # build tree based on xml
         if kwargs.get('ccgXml') is not None:
@@ -195,6 +198,14 @@ class CCGtree():
             print('{} *{}*'.format(lfnode.word, lfnode.cat.monotonicity), end=' ')
         print()
 
+    def printSentLatex(self):
+        # \mbox{\emph{No${}^{\upred}$ man${}^{\downred}$ walks${}^{\downred}$}}\\
+        for lfnode in self.leafNodes:
+            print('{}${{}}^{{\{}}}$'.format(lfnode.word,lfnode.cat.monotonicity)\
+                  .replace('DOWN','downred').replace('UP','upred')\
+                  .replace('UNK','nonered'), end=' ')
+        print()
+
     def __str__(self):
         return ' '.join(['{} *{}*'.format(lfnode.word, lfnode.cat.monotonicity)
                          for lfnode in self.leafNodes])
@@ -213,6 +224,21 @@ class CCGtree():
             for child in node.children:
                 self.printTreeHelper(child)
 
+    def printAllInferences(self):
+        '''  print all inferences of a ccgtree   '''
+        self.printAllInferencesHelper(self, 1)
+        print('{} inferences in total'.format(self.numInfTotal))
+
+    def printAllInferencesHelper(self, ccgtree, level):
+        if len(ccgtree.inferences) == 0:
+            # print('no inferences!')
+            return
+        for inf in ccgtree.inferences:
+            self.numInfTotal += 1
+            print('\n*{}* replacements:'.format(level), end='\n\n')
+            inf.printSentLatex()
+            self.printAllInferencesHelper(inf, level+1)
+
     def fixTree(self):
         ''' fix most and RC problem '''
         self.fixMost()
@@ -222,7 +248,7 @@ class CCGtree():
         '''  replacement for inference; k is knowledge  '''
         # print('k.frags.keys():')
         # print(k.frags.keys())
-        newNode = None
+        newNodes = None  # a list
 
         for ind in range(len(self.allNodes)):
             node = self.allNodes[ind]
@@ -239,44 +265,48 @@ class CCGtree():
                     # replace node with the first thing bigger than it
                     # print('\nfound a node to replace:', node.wholeStr)
                     # print('replace it with        :', k.frags[node.wholeStr].big[0].ccgtree.root.wholeStr)
-                    newNode = k.frags[node.wholeStr].big[0].ccgtree.root
+                    newNodes = k.frags[node.wholeStr].big  #[0].ccgtree.root
                 if (node.cat.monotonicity == 'DOWN') and (len(k.frags[node.wholeStr].small)!=0):
                     # replace node with the first thing smaller than it
                     # print('\nfound a node to replace:', node.wholeStr)
                     # print('replace it with        :', k.frags[node.wholeStr].small[0].ccgtree.root.wholeStr)
-                    newNode = k.frags[node.wholeStr].small[0].ccgtree.root
+                    newNodes = k.frags[node.wholeStr].small  #[0].ccgtree.root
 
-                if newNode is not None:
-                    # initialize new tree
-                    newTree = copy.deepcopy(self)
-                    newTree.inferences1replace = []
-                    oldNode = newTree.allNodes[ind]  # important: locate the oldNode in newTree
+                # if newNodes is not None:
+                if newNodes is not None:
+                    for newNode in newNodes:
+                        newNode = newNode.ccgtree.root
+                        # initialize new tree
+                        newTree = copy.deepcopy(self)
+                        newTree.inferences = []
+                        oldNode = newTree.allNodes[ind]  # important: locate the oldNode in newTree
 
-                    # replace oldNode w/ newNode
-                    newNode = copy.deepcopy(newNode)  # newNode is from K, need to make a new instance
-                    oldNode.parent.children[i] = newNode
-                    newNode.parent = oldNode.parent
-                    # fix sister node
-                    if len(newNode.parent.children) > 1:
-                        newNode.parent.children[0].sisters = [newNode.parent.children[1]]
-                        newNode.parent.children[1].sisters = [newNode.parent.children[0]]
+                        # replace oldNode w/ newNode
+                        newNode = copy.deepcopy(newNode)  # newNode is from K, need to make a new instance
+                        oldNode.parent.children[i] = newNode
+                        newNode.parent = oldNode.parent
+                        # fix sister node
+                        if len(newNode.parent.children) > 1:
+                            newNode.parent.children[0].sisters = [newNode.parent.children[1]]
+                            newNode.parent.children[1].sisters = [newNode.parent.children[0]]
 
-                    # rebuild tree
-                    newTree.buildFromRoot()
-                    newTree.regetDepth()
-                    newTree.getPM()
-                    newTree.polarize()
+                        # rebuild tree
+                        newTree.buildFromRoot()
+                        newTree.regetDepth()
+                        newTree.getPM()
+                        newTree.polarize()
 
-                    # add to inferences1replace
-                    self.inferences1replace.append(newTree)
+                        # add to inferences
+                        self.inferences.append(newTree)
 
-                    newNode = None
+                newNodes = None
 
-        if len(self.inferences1replace) == 0:
+        if len(self.inferences) == 0:
             newTree = None  # release mem
             print('Nothing for replacement')
 
     def getPM(self):
+        ''' add plus minus to all nodes '''
         self.getPM_LeafNodes()
         self.getPM_NTN()
 
@@ -354,6 +384,9 @@ class CCGtree():
                 token.cat.semCat.OUT.pm = '+'
 
             elif token.word.upper() == 'THEN':
+                token.cat.semCat.pm = '+'
+
+            elif token.word.upper() == 'IT':
                 token.cat.semCat.pm = '+'
 
             # TODO 'most'
