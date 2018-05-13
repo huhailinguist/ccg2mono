@@ -39,4 +39,9 @@ python3 ${ccg2lambdaDir}/scripts/visualize.py tmp.xml > "$1_candcParsed.html"
 
 # deactivate
 
+# for knowledge
+if [ $1 = "knowledge" ]; then
+    mv tmp.candc.xml knowledge.candc.xml
+fi
+
 printf "Done!\n"

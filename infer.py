@@ -7,7 +7,7 @@ input: polarized trees from getMono.py
 Hai Hu, Feb 2018
 '''
 
-import getMono, WN
+import getMono
 import sys, re, os, copy
 
 def main():
