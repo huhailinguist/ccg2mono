@@ -1,0 +1,338 @@
+    <!DOCTYPE html>
+    <html lang='en'>
+    <head>
+      <meta charset='UTF-8'/>
+      <title>CCG to Lambda conversion</title>
+      <style>
+        body {
+          font-size: 1em;
+        }
+      </style>
+      <script type="text/javascript"
+              src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+      </script>
+    </head>
+    <body>
+    <p>Premise 0, tree s0_ccg0: John is a cat .</p>
+<math xmlns='http://www.w3.org/1998/Math/MathML'>
+<mrow><mo>rp</mo><mfrac linethickness='3px'>
+  <mrow><mrow><mo>ba</mo><mfrac linethickness='3px'>
+  <mrow><mrow><mo>lex</mo><mfrac linethickness='3px'>
+  <mrow><mfrac linethickness='0px'>
+  <mrow><mtext  fontsize='1.0' color='Black'>John</mtext>
+</mrow>
+  <mrow><mfrac linethickness='0px'>
+  <mrow><mtext  fontsize='1.0' color='Green'>NNP</mtext>
+<mtext>,</mtext><mspace width='.1em'/><mtext  fontsize='1.0' color='Green'>I-PER</mtext>
+</mrow>
+  <mrow>  <mi mathvariant='italic' fontsize='1.0' color='Red'>N  </mi>
+</mrow>
+</mfrac>
+</mrow>
+</mfrac>
+</mrow>
+  <mrow>  <mi mathvariant='italic' fontsize='1.0' color='Red'>NP  </mi>
+</mrow>
+</mfrac>
+</mrow><mrow><mo>fa</mo><mfrac linethickness='3px'>
+  <mrow><mfrac linethickness='0px'>
+  <mrow><mtext  fontsize='1.0' color='Black'>is</mtext>
+</mrow>
+  <mrow><mfrac linethickness='0px'>
+  <mrow><mtext  fontsize='1.0' color='Green'>VBZ</mtext>
+<mtext>,</mtext><mspace width='.1em'/><mtext  fontsize='1.0' color='Green'>O</mtext>
+</mrow>
+  <mrow><msub>
+  <mi mathvariant='italic' fontsize='1.0' color='Red'>(S  </mi>
+  <mrow>
+    <mi mathvariant='italic' fontsize='0.8' color='Purple'>[dcl=true]  </mi>
+  </mrow>
+</msub>
+  <mi mathvariant='italic' fontsize='1.0' color='Red'>\NP)/NP  </mi>
+</mrow>
+</mfrac>
+</mrow>
+</mfrac>
+<mrow><mo>fa</mo><mfrac linethickness='3px'>
+  <mrow><mfrac linethickness='0px'>
+  <mrow><mtext  fontsize='1.0' color='Black'>a</mtext>
+</mrow>
+  <mrow><mfrac linethickness='0px'>
+  <mrow><mtext  fontsize='1.0' color='Green'>DT</mtext>
+<mtext>,</mtext><mspace width='.1em'/><mtext  fontsize='1.0' color='Green'>O</mtext>
+</mrow>
+  <mrow><msub>
+  <mi mathvariant='italic' fontsize='1.0' color='Red'>NP  </mi>
+  <mrow>
+    <mi mathvariant='italic' fontsize='0.8' color='Purple'>[nb=true]  </mi>
+  </mrow>
+</msub>
+  <mi mathvariant='italic' fontsize='1.0' color='Red'>/N  </mi>
+</mrow>
+</mfrac>
+</mrow>
+</mfrac>
+<mfrac linethickness='0px'>
+  <mrow><mtext  fontsize='1.0' color='Black'>cat</mtext>
+</mrow>
+  <mrow><mfrac linethickness='0px'>
+  <mrow><mtext  fontsize='1.0' color='Green'>NN</mtext>
+<mtext>,</mtext><mspace width='.1em'/><mtext  fontsize='1.0' color='Green'>O</mtext>
+</mrow>
+  <mrow>  <mi mathvariant='italic' fontsize='1.0' color='Red'>N  </mi>
+</mrow>
+</mfrac>
+</mrow>
+</mfrac>
+</mrow>
+  <mrow><msub>
+  <mi mathvariant='italic' fontsize='1.0' color='Red'>NP  </mi>
+  <mrow>
+    <mi mathvariant='italic' fontsize='0.8' color='Purple'>[nb=true]  </mi>
+  </mrow>
+</msub>
+</mrow>
+</mfrac>
+</mrow></mrow>
+  <mrow><msub>
+  <mi mathvariant='italic' fontsize='1.0' color='Red'>S  </mi>
+  <mrow>
+    <mi mathvariant='italic' fontsize='0.8' color='Purple'>[dcl=true]  </mi>
+  </mrow>
+</msub>
+  <mi mathvariant='italic' fontsize='1.0' color='Red'>\NP  </mi>
+</mrow>
+</mfrac>
+</mrow></mrow>
+  <mrow><msub>
+  <mi mathvariant='italic' fontsize='1.0' color='Red'>S  </mi>
+  <mrow>
+    <mi mathvariant='italic' fontsize='0.8' color='Purple'>[dcl=true]  </mi>
+  </mrow>
+</msub>
+</mrow>
+</mfrac>
+</mrow><mfrac linethickness='0px'>
+  <mrow><mtext  fontsize='1.0' color='Black'>.</mtext>
+</mrow>
+  <mrow></mrow>
+</mfrac>
+</mrow>
+  <mrow><msub>
+  <mi mathvariant='italic' fontsize='1.0' color='Red'>S  </mi>
+  <mrow>
+    <mi mathvariant='italic' fontsize='0.8' color='Purple'>[dcl=true]  </mi>
+  </mrow>
+</msub>
+</mrow>
+</mfrac>
+</mrow></math>
+<p>Premise 1, tree s1_ccg0: Tom is a dog .</p>
+<math xmlns='http://www.w3.org/1998/Math/MathML'>
+<mrow><mo>rp</mo><mfrac linethickness='3px'>
+  <mrow><mrow><mo>ba</mo><mfrac linethickness='3px'>
+  <mrow><mrow><mo>lex</mo><mfrac linethickness='3px'>
+  <mrow><mfrac linethickness='0px'>
+  <mrow><mtext  fontsize='1.0' color='Black'>Tom</mtext>
+</mrow>
+  <mrow><mfrac linethickness='0px'>
+  <mrow><mtext  fontsize='1.0' color='Green'>NNP</mtext>
+<mtext>,</mtext><mspace width='.1em'/><mtext  fontsize='1.0' color='Green'>I-PER</mtext>
+</mrow>
+  <mrow>  <mi mathvariant='italic' fontsize='1.0' color='Red'>N  </mi>
+</mrow>
+</mfrac>
+</mrow>
+</mfrac>
+</mrow>
+  <mrow>  <mi mathvariant='italic' fontsize='1.0' color='Red'>NP  </mi>
+</mrow>
+</mfrac>
+</mrow><mrow><mo>fa</mo><mfrac linethickness='3px'>
+  <mrow><mfrac linethickness='0px'>
+  <mrow><mtext  fontsize='1.0' color='Black'>is</mtext>
+</mrow>
+  <mrow><mfrac linethickness='0px'>
+  <mrow><mtext  fontsize='1.0' color='Green'>VBZ</mtext>
+<mtext>,</mtext><mspace width='.1em'/><mtext  fontsize='1.0' color='Green'>O</mtext>
+</mrow>
+  <mrow><msub>
+  <mi mathvariant='italic' fontsize='1.0' color='Red'>(S  </mi>
+  <mrow>
+    <mi mathvariant='italic' fontsize='0.8' color='Purple'>[dcl=true]  </mi>
+  </mrow>
+</msub>
+  <mi mathvariant='italic' fontsize='1.0' color='Red'>\NP)/NP  </mi>
+</mrow>
+</mfrac>
+</mrow>
+</mfrac>
+<mrow><mo>fa</mo><mfrac linethickness='3px'>
+  <mrow><mfrac linethickness='0px'>
+  <mrow><mtext  fontsize='1.0' color='Black'>a</mtext>
+</mrow>
+  <mrow><mfrac linethickness='0px'>
+  <mrow><mtext  fontsize='1.0' color='Green'>DT</mtext>
+<mtext>,</mtext><mspace width='.1em'/><mtext  fontsize='1.0' color='Green'>O</mtext>
+</mrow>
+  <mrow><msub>
+  <mi mathvariant='italic' fontsize='1.0' color='Red'>NP  </mi>
+  <mrow>
+    <mi mathvariant='italic' fontsize='0.8' color='Purple'>[nb=true]  </mi>
+  </mrow>
+</msub>
+  <mi mathvariant='italic' fontsize='1.0' color='Red'>/N  </mi>
+</mrow>
+</mfrac>
+</mrow>
+</mfrac>
+<mfrac linethickness='0px'>
+  <mrow><mtext  fontsize='1.0' color='Black'>dog</mtext>
+</mrow>
+  <mrow><mfrac linethickness='0px'>
+  <mrow><mtext  fontsize='1.0' color='Green'>NN</mtext>
+<mtext>,</mtext><mspace width='.1em'/><mtext  fontsize='1.0' color='Green'>O</mtext>
+</mrow>
+  <mrow>  <mi mathvariant='italic' fontsize='1.0' color='Red'>N  </mi>
+</mrow>
+</mfrac>
+</mrow>
+</mfrac>
+</mrow>
+  <mrow><msub>
+  <mi mathvariant='italic' fontsize='1.0' color='Red'>NP  </mi>
+  <mrow>
+    <mi mathvariant='italic' fontsize='0.8' color='Purple'>[nb=true]  </mi>
+  </mrow>
+</msub>
+</mrow>
+</mfrac>
+</mrow></mrow>
+  <mrow><msub>
+  <mi mathvariant='italic' fontsize='1.0' color='Red'>S  </mi>
+  <mrow>
+    <mi mathvariant='italic' fontsize='0.8' color='Purple'>[dcl=true]  </mi>
+  </mrow>
+</msub>
+  <mi mathvariant='italic' fontsize='1.0' color='Red'>\NP  </mi>
+</mrow>
+</mfrac>
+</mrow></mrow>
+  <mrow><msub>
+  <mi mathvariant='italic' fontsize='1.0' color='Red'>S  </mi>
+  <mrow>
+    <mi mathvariant='italic' fontsize='0.8' color='Purple'>[dcl=true]  </mi>
+  </mrow>
+</msub>
+</mrow>
+</mfrac>
+</mrow><mfrac linethickness='0px'>
+  <mrow><mtext  fontsize='1.0' color='Black'>.</mtext>
+</mrow>
+  <mrow></mrow>
+</mfrac>
+</mrow>
+  <mrow><msub>
+  <mi mathvariant='italic' fontsize='1.0' color='Red'>S  </mi>
+  <mrow>
+    <mi mathvariant='italic' fontsize='0.8' color='Purple'>[dcl=true]  </mi>
+  </mrow>
+</msub>
+</mrow>
+</mfrac>
+</mrow></math>
+<p>Conclusion, tree s2_ccg0: Labradors are dogs .</p>
+<math xmlns='http://www.w3.org/1998/Math/MathML'>
+<mrow><mo>rp</mo><mfrac linethickness='3px'>
+  <mrow><mrow><mo>ba</mo><mfrac linethickness='3px'>
+  <mrow><mrow><mo>lex</mo><mfrac linethickness='3px'>
+  <mrow><mfrac linethickness='0px'>
+  <mrow><mtext  fontsize='1.0' color='Black'>Labradors</mtext>
+</mrow>
+  <mrow><mfrac linethickness='0px'>
+  <mrow><mtext  fontsize='1.0' color='Green'>NNS</mtext>
+<mtext>,</mtext><mspace width='.1em'/><mtext  fontsize='1.0' color='Green'>O</mtext>
+</mrow>
+  <mrow>  <mi mathvariant='italic' fontsize='1.0' color='Red'>N  </mi>
+</mrow>
+</mfrac>
+</mrow>
+</mfrac>
+</mrow>
+  <mrow>  <mi mathvariant='italic' fontsize='1.0' color='Red'>NP  </mi>
+</mrow>
+</mfrac>
+</mrow><mrow><mo>fa</mo><mfrac linethickness='3px'>
+  <mrow><mfrac linethickness='0px'>
+  <mrow><mtext  fontsize='1.0' color='Black'>are</mtext>
+</mrow>
+  <mrow><mfrac linethickness='0px'>
+  <mrow><mtext  fontsize='1.0' color='Green'>VBP</mtext>
+<mtext>,</mtext><mspace width='.1em'/><mtext  fontsize='1.0' color='Green'>O</mtext>
+</mrow>
+  <mrow><msub>
+  <mi mathvariant='italic' fontsize='1.0' color='Red'>(S  </mi>
+  <mrow>
+    <mi mathvariant='italic' fontsize='0.8' color='Purple'>[dcl=true]  </mi>
+  </mrow>
+</msub>
+  <mi mathvariant='italic' fontsize='1.0' color='Red'>\NP)/NP  </mi>
+</mrow>
+</mfrac>
+</mrow>
+</mfrac>
+<mrow><mo>lex</mo><mfrac linethickness='3px'>
+  <mrow><mfrac linethickness='0px'>
+  <mrow><mtext  fontsize='1.0' color='Black'>dogs</mtext>
+</mrow>
+  <mrow><mfrac linethickness='0px'>
+  <mrow><mtext  fontsize='1.0' color='Green'>NNS</mtext>
+<mtext>,</mtext><mspace width='.1em'/><mtext  fontsize='1.0' color='Green'>O</mtext>
+</mrow>
+  <mrow>  <mi mathvariant='italic' fontsize='1.0' color='Red'>N  </mi>
+</mrow>
+</mfrac>
+</mrow>
+</mfrac>
+</mrow>
+  <mrow>  <mi mathvariant='italic' fontsize='1.0' color='Red'>NP  </mi>
+</mrow>
+</mfrac>
+</mrow></mrow>
+  <mrow><msub>
+  <mi mathvariant='italic' fontsize='1.0' color='Red'>S  </mi>
+  <mrow>
+    <mi mathvariant='italic' fontsize='0.8' color='Purple'>[dcl=true]  </mi>
+  </mrow>
+</msub>
+  <mi mathvariant='italic' fontsize='1.0' color='Red'>\NP  </mi>
+</mrow>
+</mfrac>
+</mrow></mrow>
+  <mrow><msub>
+  <mi mathvariant='italic' fontsize='1.0' color='Red'>S  </mi>
+  <mrow>
+    <mi mathvariant='italic' fontsize='0.8' color='Purple'>[dcl=true]  </mi>
+  </mrow>
+</msub>
+</mrow>
+</mfrac>
+</mrow><mfrac linethickness='0px'>
+  <mrow><mtext  fontsize='1.0' color='Black'>.</mtext>
+</mrow>
+  <mrow></mrow>
+</mfrac>
+</mrow>
+  <mrow><msub>
+  <mi mathvariant='italic' fontsize='1.0' color='Red'>S  </mi>
+  <mrow>
+    <mi mathvariant='italic' fontsize='0.8' color='Purple'>[dcl=true]  </mi>
+  </mrow>
+</msub>
+</mrow>
+</mfrac>
+</mrow></math>
+
+    </body>
+    </html>
+    

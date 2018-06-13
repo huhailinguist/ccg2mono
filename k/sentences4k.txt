@@ -1,0 +1,3 @@
+John is a cat.
+Tom is a dog.
+Labradors are dogs.
