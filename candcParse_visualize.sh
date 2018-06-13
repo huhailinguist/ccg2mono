@@ -15,9 +15,9 @@ fi
 
 # -------------------------------------------------
 # set the following to the directories of CandC parser and ccg2lambda
-candcBinDir="/media/hai/G/tools/CandCparser/candc-1.00-compiled/bin"
-candcModelsDir="/media/hai/G/tools/CandCparser/models"
-ccg2lambdaDir="/media/hai/G/tools/ccg2lambda"
+candcBinDir="../candc-1.00/bin"
+candcModelsDir="../candc-1.00/models"
+ccg2lambdaDir="../ccg2lambda"
 # -------------------------------------------------
 
 # source ${ccg2lambdaDir}/py3/bin/activate
