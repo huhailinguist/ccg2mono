@@ -68,7 +68,7 @@ def main():
             t.printTree()
 
         t.printSent()
-        t.printSentLatex()
+        # t.printSentLatex()
 
     # test(trees)
 
@@ -194,9 +194,10 @@ class CCGtree():
             node.wholeStr = ' '.join([x.wholeStr for x in node.children]).rstrip()
 
     def printSent(self):
+        s = ''
         for lfnode in self.leafNodes:
-            print('{} *{}*'.format(lfnode.word, lfnode.cat.monotonicity), end=' ')
-        print()
+            s+='{}{} '.format(lfnode.word, lfnode.cat.monotonicity)
+        print(s.replace('DOWN', '\u2193').replace('UP', '\u2191').replace('UNK', '='))
 
     def printSentLatex(self):
         # \mbox{\emph{No${}^{\upred}$ man${}^{\downred}$ walks${}^{\downred}$}}\\
@@ -236,7 +237,8 @@ class CCGtree():
         for inf in ccgtree.inferences:
             self.numInfTotal += 1
             print('\n*{}* replacements:'.format(level), end='\n\n')
-            inf.printSentLatex()
+            # inf.printSentLatex()
+            inf.printSent()
             self.printAllInferencesHelper(inf, level+1)
 
     def fixTree(self):
@@ -248,7 +250,9 @@ class CCGtree():
         '''  replacement for inference; k is knowledge  '''
         # print('k.frags.keys():')
         # print(k.frags.keys())
-        newNodes = None  # a list
+        # newNodes is a list. there might be multiple things to replace in each run.
+        # e.g. beagle < [dog, animal]
+        newNodes = None
 
         for ind in range(len(self.allNodes)):
             node = self.allNodes[ind]
@@ -266,16 +270,42 @@ class CCGtree():
                     # print('\nfound a node to replace:', node.wholeStr)
                     # print('replace it with        :', k.frags[node.wholeStr].big[0].ccgtree.root.wholeStr)
                     newNodes = k.frags[node.wholeStr].big  #[0].ccgtree.root
+
                 if (node.cat.monotonicity == 'DOWN') and (len(k.frags[node.wholeStr].small)!=0):
                     # replace node with the first thing smaller than it
                     # print('\nfound a node to replace:', node.wholeStr)
                     # print('replace it with        :', k.frags[node.wholeStr].small[0].ccgtree.root.wholeStr)
                     newNodes = k.frags[node.wholeStr].small  #[0].ccgtree.root
 
-                # if newNodes is not None:
                 if newNodes is not None:
-                    for newNode in newNodes:
+                    for newNode in newNodes:  # newNode is a Fragment
                         newNode = newNode.ccgtree.root
+
+                        # -----------------------------
+                        # SET POS and CAT for newNode
+                        # !! newNode.pos, newNode.cat came from building the knowledge
+                        # could be incomplete
+                        try:
+                            if newNode.pos is None:
+                                newNode.pos = node.pos; newNode.cat = node.cat
+                                print(newNode.pos, newNode.cat)
+                                print(node.pos, node.cat)
+                            elif newNode.pos[0] != node.pos[0]:  # e.g. newNode=V, node=N
+                                print('!! mismatch in knowledge pair:', newNode, node)
+                                continue
+                            elif (newNode.pos == node.pos) and (newNode.cat == newNode.cat):
+                                pass
+                            else:  # e.g. both are N
+                                newNode.pos = node.pos; newNode.cat = node.cat
+                                # print(newNode.pos, newNode.cat)
+                                # print(node.pos, node.cat)
+                                # print()
+                        except AttributeError:  # NonTermNode does not have pos
+                            # print(newNode.cat, node.cat)
+                            pass
+
+                        # --------------------------
+                        # NOW build new tree to add to inference
                         # initialize new tree
                         newTree = copy.deepcopy(self)
                         newTree.inferences = []
@@ -315,7 +345,7 @@ class CCGtree():
         # first do leafNodes, i.e. words
         for token in self.leafNodes:
             # quantifiers
-            if token.word.upper() == 'SOME':  # + +
+            if token.word.upper() in ['SOME', 'A', 'AN']:  # + +
                 # if token.cat.semCat.semCatStr == '((e,t),((e,t),t))':
                 token.cat.semCat.pm = '+'
                 token.cat.semCat.OUT.pm = '+'

@@ -29,7 +29,7 @@ cat $1 | sed -f ${ccg2lambdaDir}/en/tokenizer.sed > tmp.tok
 # parse:
 printf "parsing...\n"
 ${candcBinDir}/candc --models ${candcModelsDir} \
---candc-printer xml --input tmp.tok > tmp.candc.xml
+--candc-printer xml --input tmp.tok --output tmp.candc.xml --log mylog
 
 # convert to jigss
 python3 ${ccg2lambdaDir}/en/candc2transccg.py tmp.candc.xml > tmp.xml
