@@ -22,7 +22,6 @@ def main():
     # k = buildKnowledgeTest() # April 26
     k = Knowledge()     # JUNE 12
     k.buildAll()
-    print('\nknowledge built!\n--------------\n')
 
     # return
 
@@ -126,13 +125,14 @@ class Knowledge:
             for every adj in SUBSADJ:
               add this to knowledge: adj + noun < noun
         '''
-
+        print('\n----------------\nbuilding knowledge...')
         self.buildPairs()
         self.buildSubsecAdj()
-        pass
+        print('\nknowledge built!\n--------------\n')
+
 
     def buildPairs(self):
-        print('building from pairs ...\n')
+        print('building knowledge from pairs ...\n')
         # read in pairs.txt in ./k
         with open('./k/pairs.txt') as f:
             for line in f:
@@ -183,7 +183,7 @@ class Knowledge:
         # print(self.allnouns)
 
     def buildSubsecAdj(self):
-        print('building from subsective adjs ...\n')
+        print('building knowledge from subsective adjs ...\n')
         # read in all subsec adjs
         with open('./k/subsecAdj.txt') as f:
             for line in f:

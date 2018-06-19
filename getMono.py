@@ -17,8 +17,9 @@ For each tree:
 Hai Hu, Feb, 2018
 '''
 
-import sys,os,re,copy
+import sys, os, re, copy
 from bs4 import BeautifulSoup
+from IPython.display import Markdown, display
 
 # uparrow: U+2191, down arrow: U+2193
 
@@ -42,8 +43,8 @@ def main():
         exit(0)
     sentToTest = None
     if len(sys.argv) >= 2:
-        sentToTest = int(sys.argv[1]) # sentence to test
-        print('sentToTest:',sentToTest)
+        sentToTest = int(sys.argv[1])  # sentence to test
+        print('sentToTest:', sentToTest)
     trees = CCGtrees()
     trees.readCandCxml('tmp.candc.xml')
 
@@ -52,7 +53,7 @@ def main():
             if idx != sentToTest:
                 continue
         print()
-        print('-'*20)
+        print('-' * 20)
         print('tree {}\n'.format(idx))
         if any(x in sys.argv for x in ['-v1', '-vall']):
             t.printTree()
@@ -70,13 +71,21 @@ def main():
         t.printSent()
         # t.printSentLatex()
 
-    # test(trees)
+        # test(trees)
+
+def printmdcolor(string, color=None):
+    colorstr = "<span style='color:{}'>{}</span>".format(color, string)
+    display(Markdown(colorstr))
+
+def printmd(string):
+    mystr = "<span>{}</span>".format(string)
+    display(Markdown(mystr))
 
 def test(trees):
     '''  test other constructors of CCGtree: passed  '''
     t = trees.trees[3]
     node = t.root.children[0].children[0]
-    # print(node)
+    print(node)
 
     newtree = CCGtree(NonTermNode=node)
     newtree.printTree()
@@ -88,11 +97,11 @@ class CCGtrees():
         self.trees = {}
         self.numTrees = 0
 
-    def readCandCxml(self, xml_fn, treeIdx=None): # treeIdx starts at 0
+    def readCandCxml(self, xml_fn, treeIdx=None):  # treeIdx starts at 0
         soup = BeautifulSoup(open(xml_fn).read(), 'lxml')
-        counterSent=-1
+        counterSent = -1
         for ccgXml in soup.find_all('ccg'):
-            counterSent+=1
+            counterSent += 1
             if treeIdx:
                 if counterSent != treeIdx:
                     continue
@@ -102,13 +111,13 @@ class CCGtrees():
             except AssertionError:
                 print('more than 1 root')
                 exit(1)
-            
+
             #### build the tree  ####
             print('building tree {}...'.format(counterSent))
             tree = CCGtree(ccgXml=ccgXml)
             self.trees[counterSent] = tree
 
-        print('\ntrees built!\n\n')
+        printmdcolor('\ntrees built!\n\n', 'blue')
 
 class CCGtree():
     '''
@@ -359,8 +368,8 @@ class CCGtree():
                 token.cat.semCat.OUT.pm = '-'
 
             # negation
-            elif token.word.upper() in ["NOT", "N'T"]: # -
-                token.cat.semCat.pm = '-' # check semCatStr??
+            elif token.word.upper() in ["NOT", "N'T"]:  # -
+                token.cat.semCat.pm = '-'  # check semCatStr??
 
             # adjectives, add +
             elif token.pos.upper() == 'JJ':
@@ -406,9 +415,7 @@ class CCGtree():
 
             # TODO how about other DTs: a, the, this, that?
 
-            # TODO 'if'
             # if = ((t,+t),-t)
-
             elif token.word.upper() == 'IF':
                 token.cat.semCat.pm = '-'
                 token.cat.semCat.OUT.pm = '+'
@@ -427,15 +434,19 @@ class CCGtree():
                 pass
 
             # that, who; (token.pos == 'WDT') necessary?
-            elif token.word.upper() in ['THAT','WHO'] and (token.pos in ['WDT','IN','WP']):
+            elif token.word.upper() in ['THAT', 'WHO'] and (token.pos in ['WDT', 'IN', 'WP']):
                 # already handled in Cat()
                 pass
 
             # verb, then should be + TODO do we really need it?
             elif token.pos.upper().startswith('VB'):
                 token.cat.semCat.pm = '+'
-                if token.cat.typeWOfeats == r'(S\NP)/NP': # transitive verb
-                    token.cat.semCat.OUT.pm = '+' # make it (S+\NP)/NP
+                if token.cat.typeWOfeats == r'(S\NP)/NP':  # transitive verb
+                    token.cat.semCat.OUT.pm = '+'  # make it (S+\NP)/NP
+
+            # if the leafNode is NP, e.g. pronouns such as I, make it NP+
+            elif token.cat.originalType == 'NP':
+                token.cat.semCat.pm = '+'
 
     def getPM_NTN2(self):
         # another way of getting pm for non terminal nodes
@@ -453,7 +464,7 @@ class CCGtree():
         # finally do the same for parent, until reaches root
         if node.parent is not None:
             self.getPM_NTN2Helper(node.parent)
-        else: # already at root
+        else:  # already at root
             return
 
     def getPM_NTN(self):
@@ -468,12 +479,12 @@ class CCGtree():
             self.getPM_NTNmyparent(node)
         # if it's not terminal node
         else:
-            if len(node.children) == 2: # 2 children
-                self.getPM_NTNHelper(node.children[0]) # left child
-                self.getPM_NTNHelper(node.children[1]) # right child
+            if len(node.children) == 2:  # 2 children
+                self.getPM_NTNHelper(node.children[0])  # left child
+                self.getPM_NTNHelper(node.children[1])  # right child
                 # now fix node.parent
                 self.getPM_NTNmyparent(node)
-            elif len(node.children) == 1: # only one child, rule is either 'lex' or 'tr'
+            elif len(node.children) == 1:  # only one child, rule is either 'lex' or 'tr'
                 self.getPM_NTNHelper(node.children[0])
                 # now fix node itself
                 self.getPM_NTNmyparent(node)
@@ -487,13 +498,13 @@ class CCGtree():
             if node.parent.ruleType == 'conj':
                 self.getPM_NTNmyparentCONJ(node)
         else:
-            if len(node.children) == 2: # 2 children
-                self.getPM_NTNHelperCONJ(node.children[0]) # left child
-                self.getPM_NTNHelperCONJ(node.children[1]) # right child
+            if len(node.children) == 2:  # 2 children
+                self.getPM_NTNHelperCONJ(node.children[0])  # left child
+                self.getPM_NTNHelperCONJ(node.children[1])  # right child
                 # now fix node.parent
                 if node.parent.ruleType == 'conj':
                     self.getPM_NTNmyparentCONJ(node)
-            elif len(node.children) == 1: # only one child, rule is either 'lex' or 'tr'
+            elif len(node.children) == 1:  # only one child, rule is either 'lex' or 'tr'
                 self.getPM_NTNHelperCONJ(node.children[0])
                 # now fix node itself
                 if node.parent.ruleType == 'conj':
@@ -527,9 +538,9 @@ class CCGtree():
                     parent.cat.semCat.OUT.pm = right.cat.semCat.pm
                 else:
                     parent.cat.semCat.OUT.pm = None
-                # print(parent.cat.semCat)
-            
-            else: # right is conj
+                    # print(parent.cat.semCat)
+
+            else:  # right is conj
                 # !! assign parent.OUT pm !! #
                 if (left.cat.semCat.pm is None) or (sister.cat.semCat.pm is None):
                     parent.cat.semCat.OUT.pm = None  # this will be GRAND PARENT
@@ -538,8 +549,8 @@ class CCGtree():
                     parent.cat.semCat.OUT.pm = left.cat.semCat.pm
                 else:
                     parent.cat.semCat.OUT.pm = None
-        
-        except AttributeError: # also right is conj
+
+        except AttributeError:  # also right is conj
             # !! assign parent.OUT pm !! #
             if (left.cat.semCat.pm is None) or (sister.cat.semCat.pm is None):
                 parent.cat.semCat.OUT.pm = None  # this will be GRAND PARENT
@@ -549,9 +560,9 @@ class CCGtree():
             else:
                 parent.cat.semCat.OUT.pm = None
 
-            # if conj is 'and', 'or', then get + ??
-            # if conj is 'but', should be (X\X)-/X ??
-            # but what about the first slash??? TODO
+                # if conj is 'and', 'or', then get + ??
+                # if conj is 'but', should be (X\X)-/X ??
+                # but what about the first slash??? TODO
 
     def getPM_NTNmyparent(self, node):
         ''' get the minusPlus of node.parent '''
@@ -570,7 +581,7 @@ class CCGtree():
                 # NP -> N: rule added by myself, for RC, do nothing
                 # print('*** unlex rule ***')
                 pass
-            else: # terminal node
+            else:  # terminal node
                 pass
 
 
@@ -584,9 +595,9 @@ class CCGtree():
                 # make sure input and output of FA is correct
                 assert parent.cat.semCat.semCatStr == left.cat.semCat.OUT.semCatStr
                 assert left.cat.semCat.IN.semCatStr == right.cat.semCat.semCatStr
-                parent.cat.semCat = left.cat.semCat.OUT # ASSIGN PM
+                parent.cat.semCat = left.cat.semCat.OUT  # ASSIGN PM
 
-                self.compareSemCat(left.cat.semCat.IN, right.cat.semCat, parent) # IMPORTANT: comparator
+                self.compareSemCat(left.cat.semCat.IN, right.cat.semCat, parent)  # IMPORTANT: comparator
                 left.cat.semCat.IN = right.cat.semCat
 
             elif parent.ruleType == 'ba':
@@ -609,7 +620,7 @@ class CCGtree():
                 parent.cat.semCat = right.cat.semCat.OUT  # ASSIGN PM
 
                 # TODO maybe we need the comparator here
-                self.compareSemCat(right.cat.semCat.IN, left.cat.semCat, parent) # IMPORTANT
+                self.compareSemCat(right.cat.semCat.IN, left.cat.semCat, parent)  # IMPORTANT
                 right.cat.semCat.IN = left.cat.semCat
 
             elif parent.ruleType == 'bx':
@@ -677,7 +688,7 @@ class CCGtree():
                 else:
                     parent.cat.semCat.pm = '-'
 
-            elif parent.ruleType in ['rp', 'lp']: # punctuation, make parent.pm = non-punctuation-child.pm
+            elif parent.ruleType in ['rp', 'lp']:  # punctuation, make parent.pm = non-punctuation-child.pm
                 if parent.cat.semCat.semCatStr == left.cat.semCat.semCatStr:
                     parent.cat.semCat.pm = left.cat.semCat.pm
                 else:
@@ -714,7 +725,7 @@ class CCGtree():
                 print(node.parent)
                 pass
 
-            # TODO
+                # TODO
         else:
             print('wrong number of sisters: {}'.format(node))
             exit(1)
@@ -748,37 +759,77 @@ class CCGtree():
             right = node.children[1]
             
             if node.ruleType == 'ba':  # Y X\Y --> X
-                if left.cat.typeWOfeats == 'NP':  ## TODO make NP the functor
-                    self.polarizeHelper(left, monoDirection)
-                    self.polarizeHelper(right, self.calcMono(left, monoDirection))
-                else:
-                    try:
-                        if right.ruleType.upper() == 'CONJ':
-                            self.polarizeHelper(left, self.calcMono(right, monoDirection))
-                            self.polarizeHelper(right, monoDirection)
+                try:
+                    if right.ruleType.upper() == 'CONJ':
+                        self.polarizeHelper(left, self.calcMono(right, monoDirection))
+                        self.polarizeHelper(right, monoDirection)
+                    else:
+                        if right.cat.semCat.IN.semCatStr == '((e,t),t)':  # NP
+                            if right.cat.semCat.IN.pm == '-':  # NP-
+                                # then flip monotonicity
+                                self.polarizeHelper(right, self.flip(monoDirection))
+                            elif right.cat.semCat.IN.pm is None:  # NP=
+                                self.polarizeHelper(right, 'UNK')
+                            else:  # NP+
+                                self.polarizeHelper(right, monoDirection)
                         else:
                             self.polarizeHelper(right, monoDirection)
-                            self.polarizeHelper(left, self.calcMono(right, monoDirection))
-                    except AttributeError: # 'LeafNode' object has no attribute 'ruleType'
-                        self.polarizeHelper(right, monoDirection)
                         self.polarizeHelper(left, self.calcMono(right, monoDirection))
+                except AttributeError: # 'LeafNode' object has no attribute 'ruleType'
+                    if right.cat.semCat.IN.semCatStr == '((e,t),t)':  # NP
+                        if right.cat.semCat.IN.pm == '-':  # NP-: K rule!
+                            # then flip monotonicity
+                            self.polarizeHelper(right, self.flip(monoDirection))
+                        elif right.cat.semCat.IN.pm is None:  # NP=
+                            self.polarizeHelper(right, 'UNK')
+                        else:  # NP+
+                            self.polarizeHelper(right, monoDirection)
+                    else:
+                        self.polarizeHelper(right, monoDirection)
+                    self.polarizeHelper(left, self.calcMono(right, monoDirection))
+
+                # # K rule:
+                # print('\n\n-----right-----')
+                # print(right)
+                # print(right.cat.semCat.IN.semCatStr, right.cat.semCat.IN.pm)
+                # if right.cat.semCat.IN.semCatStr == '((e,t),t)' and \
+                #     right.cat.semCat.IN.pm == '-': # NP and -
+                #     # then flip monotonicity
+                #     print('flip!')
+                #     self.flip(monoDirection)
+                #     right.cat.monotonicity = self.calcMono('-', right.cat.monotonicity)
+                # print('-----right-----\n\n')
             
             elif node.ruleType == 'fa':  # X/Y Y --> X
-                if right.cat.typeWOfeats == 'NP':  ## TODO make NP the functor
-                    self.polarizeHelper(right, monoDirection)
-                    self.polarizeHelper(left, self.calcMono(right, monoDirection))
-                else:
-                    try:
-                        if left.ruleType.upper() == 'CONJ':
-                            self.polarizeHelper(right, self.calcMono(left, monoDirection))
-                            self.polarizeHelper(left, monoDirection)
+                try:
+                    if left.ruleType.upper() == 'CONJ':
+                        self.polarizeHelper(right, self.calcMono(left, monoDirection))
+                        self.polarizeHelper(left, monoDirection)
+                    else:
+                        if left.cat.semCat.IN.semCatStr == '((e,t),t)':  # NP
+                            if left.cat.semCat.IN.pm == '-':  # NP-
+                                # then flip monotonicity
+                                self.polarizeHelper(left, self.flip(monoDirection))
+                            elif left.cat.semCat.IN.pm is None:  # NP=
+                                self.polarizeHelper(left, 'UNK')
+                            else:  # NP+
+                                self.polarizeHelper(left, monoDirection)
                         else:
                             self.polarizeHelper(left, monoDirection)
-                            self.polarizeHelper(right, self.calcMono(left, monoDirection))
-                    except AttributeError: # 'LeafNode' object has no attribute 'ruleType'
-                        self.polarizeHelper(left, monoDirection)
                         self.polarizeHelper(right, self.calcMono(left, monoDirection))
-                                    
+                except AttributeError: # 'LeafNode' object has no attribute 'ruleType'
+                    if left.cat.semCat.IN.semCatStr == '((e,t),t)':  # NP
+                        if left.cat.semCat.IN.pm == '-':  # NP-
+                            # then flip monotonicity
+                            self.polarizeHelper(left, self.flip(monoDirection))
+                        elif left.cat.semCat.IN.pm is None:  # NP=
+                            self.polarizeHelper(left, 'UNK')
+                        else:  # NP+
+                            self.polarizeHelper(left, monoDirection)
+                    else:
+                        self.polarizeHelper(left, monoDirection)
+                    self.polarizeHelper(right, self.calcMono(left, monoDirection))
+
             elif node.ruleType == 'bx':
                 # X/Y Y\Z -> X\Z
                 if left.cat.right.typeWOfeats == right.cat.left.typeWOfeats:
@@ -866,6 +917,16 @@ class CCGtree():
             self.printTree()
             print(pm, monoDirection)
             sys.exit('Unknown Mono monoDirection/functor!')
+
+    def flip(self, monoDirection):
+        ''' flip UP and DOWN'''
+        if monoDirection == 'UP':
+            return 'DOWN'
+        elif monoDirection == 'DOWN':
+            return 'UP'
+        else:
+            print('cannot flip monoDirection!')
+            return 'UNK'
 
     def build(self, ccgXml):
         ''' build the tree recursively from xml output of CandC '''
