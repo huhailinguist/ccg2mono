@@ -235,9 +235,9 @@ class Knowledge:
         '''
         print('building knowledge from sentences4k.txt...')
         # parse ./k/sentences4k.txt
-        # print('parsing...')
-        # parseCommand = 'bash ./candcParse_visualize.sh ./k/sentences4k.txt k'
-        # os.system(parseCommand)
+        print('parsing...')
+        parseCommand = 'bash ./candcParse_visualize.sh ./k/sentences4k.txt k'
+        os.system(parseCommand)
 
         # read from sentences4k.candc.xml
         # for each sentence, find the subject and object of ISA
