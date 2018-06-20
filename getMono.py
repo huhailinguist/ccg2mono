@@ -117,7 +117,7 @@ class CCGtrees():
             tree = CCGtree(ccgXml=ccgXml)
             self.trees[counterSent] = tree
 
-        printmdcolor('\ntrees built!\n\n', 'blue')
+        print('\ntrees built!\n\n')
 
 class CCGtree():
     '''
@@ -168,7 +168,7 @@ class CCGtree():
         self.leafNodes = []
         self.nonTermNodes = []
         self.words = []
-        self.buildFromRootHelper(self.root)
+        self.buildFromRootHelper(self.root)  # get the leafNodes
         for lfnode in self.leafNodes:
             self.words.append(lfnode.word.upper())
         # fix dummy root
@@ -1178,6 +1178,26 @@ class CCGtree():
             assert len(Node.children) == 1
             self.root = Node.children[0]
 
+    def getSubjPredISA(self):
+        '''
+        find the subject and predicate in ISA sentence
+        e.g. Tom Hanks is a cat.  # next step: Tom Hanks is a cute cat.
+        returns: [Tom Hanks, cat]
+        '''
+        ISnode = None
+        for n in self.leafNodes:
+            if n.wholeStr.upper() == "IS":
+                ISnode = n
+                break
+        # print(ISnode)
+        if ISnode is not None:
+            # subj is ISnode.parent.sisters[0]; pred is ISnode.sisters[0].children[1]
+            subj = ISnode.parent.sisters[0]
+            pred = ISnode.sisters[0].children[1]
+            return (subj, pred)
+        else:
+            return (None, None)
+
 class LeafNode():
     def __init__(self,depth,cat,chunk,entity,lemma,pos,span,start,word):
         self.parent = None; self.children = []; self.sisters = []
@@ -1197,11 +1217,24 @@ class LeafNode():
         return "lf: {} {} {} {} {}".format(self.cat,self.cat.semCat,self.word,self.depth,self.cat.monotonicity)
 
 class NonTermNode():
-    def __init__(self,depth=None,cat=None,ruleType=None):
+    def __init__(self,depth=None,cat=None,ruleType=None,wholeStr=''):
         self.parent = None; self.children = []; self.sisters = []
         self.depth = depth
         self.cat = cat; self.ruleType = ruleType
-        self.wholeStr = ''
+        self.wholeStr = wholeStr
+    def copy(self):
+        cat = copy.deepcopy(self.cat)  # recursively create new copy
+        newNode = NonTermNode(self.depth, cat, self.ruleType, self.wholeStr)
+        # recursively build all descendents
+        self.copyHelper(newNode)
+        return newNode
+    def copyHelper(self, newNode):
+        # build all descendents
+        for child in self.children:
+            if len(child.children) == 0:  # LeafNode
+                newNode.children.append(child.copy())
+            else:  # NonTermNode
+                newNode.children.append(child.copy())
     def __str__(self):
         return "nt: {} {} {} {} {}".format(self.cat,self.cat.semCat,self.ruleType,self.depth,self.cat.monotonicity)
     def __repr__(self):

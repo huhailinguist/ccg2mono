@@ -22,6 +22,7 @@ def main():
     # k = buildKnowledgeTest() # April 26
     k = Knowledge()     # JUNE 12
     k.buildAll()
+    k.printK()
 
     # return
 
@@ -44,25 +45,30 @@ def main():
     # now replacement
     print('\nNOW REPLACEMENT\n')
     t.replacement(k=k)
-    for i in t.inferences:
-        i.replacement(k=k)
+    # for i in t.inferences:
+    #     i.replacement(k=k)
         # for j in i.inferences:
         #     j.replacement(k=k)
 
     print('\nwe can infer:')
 
     t.printAllInferences()
-
     # getInferOld(t, conc='No historian catwalks .')
-
 
 class Knowledge:
     def __init__(self):
+        # frags: string : Fragment
         self.frags = {}  # TODO should we call them preorders?
-        # key is string, value is Fragment class
         self.numPairs = 0
-        self.allnouns = []   # a list of LeafNode
+        self.allnouns = {}   # a dict of wordAsStr(upper) : LeafNode; ONLY 'N' here, no 'NP'
         self.subsecAdj = []  # a list of LeafNode
+
+    def printK(self):
+        for key in self.frags.keys():
+            print(self.frags[key])  # Fragment
+            print('\tsmall:', self.frags[key].small)
+            print('\tbig:  ', self.frags[key].big)
+            print()
 
     def addPair(self, pair):  # pair is a tuple = (small, big)
         small = pair[0]  # a CCGtree
@@ -127,9 +133,10 @@ class Knowledge:
         '''
         print('\n----------------\nbuilding knowledge...')
         self.buildPairs()
+        self.buildISA()
         self.buildSubsecAdj()
+        self.buildSelfDef()  # self defined relations
         print('\nknowledge built!\n--------------\n')
-
 
     def buildPairs(self):
         print('building knowledge from pairs ...\n')
@@ -169,15 +176,19 @@ class Knowledge:
                                          chunk=None, entity=None, lemma=None,
                                          pos=pos, span=None, start=None,
                                          word=relationPair[1].strip())
+
+                # add N to self.allnouns
                 if syntacticType == 'N':
-                    self.allnouns.extend([small, big])  # small and big are LeafNodes
+                    for node in [small, big]:  # small and big are LeafNodes
+                        if node.wholeStr.upper() not in self.allnouns:
+                            self.allnouns[node.wholeStr.upper()] = node
 
                 # change small and big to CCGtree().
                 small = getMono.CCGtree(TermNode=small)
                 big = getMono.CCGtree(TermNode=big)
 
                 self.addPair((small, big))
-
+        print('...done!\n')
         # print(self.frags)
         # print(self.frags['APPLE'].big)
         # print(self.allnouns)
@@ -194,11 +205,15 @@ class Knowledge:
                                        pos='JJ', span=None, start=None,
                                        word=line.strip())
                 self.subsecAdj.append(adj)
-        # print(self.subsecAdj)
+        print('-- all subsective adjs: ')
+        for node in self.subsecAdj:
+            print(node.word)
+        print('\n-- all nouns:')
+        for node in self.allnouns.values():
+            print(node.word)
 
         # combine with allnouns and add to frags
-        for noun in self.allnouns:
-            # noun is LeafNode
+        for noun in self.allnouns.values():  # noun is a LeafNode
             for adj in self.subsecAdj:
                 # newNoun is the mother of adj + noun
                 newNoun = getMono.NonTermNode(depth=0,
@@ -211,10 +226,97 @@ class Knowledge:
                 self.addPair((getMono.CCGtree(NonTermNode=newNoun),
                               getMono.CCGtree(TermNode=noun)))
 
-        print(self.frags['ANIMALS'].small)
+        # print(self.frags['ANIMALS'].small)
+        print('...done!\n')
 
     def buildISA(self):
-        pass
+        '''
+        build knowledge from ./k/sentences4k.txt
+        '''
+        print('building knowledge from sentences4k.txt...')
+        # parse ./k/sentences4k.txt
+        # print('parsing...')
+        # parseCommand = 'bash ./candcParse_visualize.sh ./k/sentences4k.txt k'
+        # os.system(parseCommand)
+
+        # read from sentences4k.candc.xml
+        # for each sentence, find the subject and object of ISA
+        knowledgetrees = getMono.CCGtrees()
+        knowledgetrees.readCandCxml('./k/sentences4k.candc.xml')
+        print('\ntrees read in from sentences4k.candc.xml!\n')
+
+        for idx, t in knowledgetrees.trees.items():
+            # print('sent', idx)
+            t.fixTree()
+            t.getPM()
+            t.polarize()
+
+            subj, pred = t.getSubjPredISA()  # subj, pred are LeafNode or NonTermNode
+
+            # if these is ISA relation
+            if (subj is not None) and (pred is not None):
+                # print('subj:', subj, subj.wholeStr)
+                # print('pred:', pred, pred.wholeStr)
+
+                # add N to self.allnouns
+                for node in [subj, pred]:
+                    try:
+                        if node.cat.typeWOfeats == 'N' and node.word.upper() not in self.allnouns:
+                            # print('adding', node, 'to allnouns')
+                            self.allnouns[node.wholeStr.upper()] = node
+                    except AttributeError:  # node is not a LeafNode, has no pos
+                        pass
+
+                # add to knowledge
+                #   every dog  < John < some dog
+                # = every pred < subj < some pred
+                every = getMono.LeafNode(depth=0,cat=getMono.Cat('NP/N',word='every'),
+                                         chunk=None,entity=None,
+                                         lemma='every',pos='DT',span=None,start=None,
+                                         word='every')
+
+                some = getMono.LeafNode(depth=0,cat=getMono.Cat('NP/N',word='some'),
+                                        chunk=None,entity=None,
+                                        lemma='some',pos='DT',span=None,start=None,
+                                        word='some')
+
+                # initialize node for phrase [every dog], [some dog]
+                everyDogNode = getMono.NonTermNode(depth=0,cat=getMono.Cat('NP'),ruleType='fa')
+                someDogNode = getMono.NonTermNode(depth=0,cat=getMono.Cat('NP'),ruleType='fa')
+
+                # fix children, parent, sister relations
+                everyDogNode.children = [every, pred]
+                every.parent = everyDogNode; pred.parent  = everyDogNode
+                every.sisters = [pred]     ; pred.sisters = [every]
+
+                predCopy = pred.copy()  # make a new copy for dog
+                someDogNode.children = [some, predCopy]
+                some.parent = someDogNode; predCopy.parent = someDogNode
+                some.sisters = [predCopy]; predCopy.sisters = [some]
+
+                # initialize the trees
+                everyDogTree = getMono.CCGtree(NonTermNode=everyDogNode)
+                someDogTree = getMono.CCGtree(NonTermNode=someDogNode)
+                subjTree = getMono.CCGtree(TermNode=subj)
+
+                # add pairs:
+                # every dog < subj < some dog
+                self.addPair((everyDogTree, subjTree))
+                self.addPair((everyDogTree, someDogTree))
+                self.addPair((subjTree, someDogTree))
+        print('...done!\n')
+
+    def buildSelfDef(self):
+        every = getMono.LeafNode(depth=0, cat=getMono.Cat('NP/N', word='every'),
+                                 chunk=None, entity=None,
+                                 lemma='every', pos='DT', span=None, start=None,
+                                 word='every')
+        some = getMono.LeafNode(depth=0, cat=getMono.Cat('NP/N', word='some'),
+                                chunk=None, entity=None,
+                                lemma='some', pos='DT', span=None, start=None,
+                                word='some')
+        self.addPair((getMono.CCGtree(TermNode=every),
+                      getMono.CCGtree(TermNode=some)))
 
 class Fragment:
     def __init__(self, ccgtree=None):
@@ -238,6 +340,7 @@ class Pair:
         self.big = big
 
 '''
+!!! OLD !!!
 Pipeline:
 
 wordnet/sentences => our representation => replacement

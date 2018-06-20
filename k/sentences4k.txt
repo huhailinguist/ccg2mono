@@ -1,3 +1,5 @@
 John is a cat.
-Tom is a dog.
+Jackie is a dog.
 Labradors are dogs.
+Tom Hanks is a cute cat.
+Jerry is a lion.
