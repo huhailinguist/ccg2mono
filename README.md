@@ -59,16 +59,12 @@ Finally, it will do inference using simple substitution, or replacement.
 Thus if the input sentence is "every&uarr cat&darr likes&uarr some&uarr good&uarr dog&uarr",
 one replacement will result in inferences such as:
 
-```
-every&uarr cat&darr likes&uarr some&uarr good&uarr animal&uarr
-every&uarr cat&darr likes&uarr some&uarr dog&uarr
-```
+- every&uarr cat&darr likes&uarr some&uarr good&uarr animal&uarr
+- every&uarr cat&darr likes&uarr some&uarr dog&uarr
 
 two replacements will result in:
 
-```
-every&uarr cat&darr likes&uarr some&uarr animal&uarr 
-```
+- every&uarr cat&darr likes&uarr some&uarr animal&uarr 
 
 ## TODO
 Add visualization to the final monotonicity output.
