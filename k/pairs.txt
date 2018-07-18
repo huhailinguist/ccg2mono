@@ -7,7 +7,7 @@ N: cats < animals
 N: man < animal
 N: men < animals
 N: apple < fruit
-V: kicked < touched
-V: hit < touched
-V: beat < touched
-V: kissed < touched
+Vt: kicked < touched
+Vt: hit < touched
+Vt: beat < touched
+Vt: kissed < touched

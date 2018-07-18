@@ -57,7 +57,7 @@ def main():
 
 class Knowledge:
     def __init__(self):
-        # frags: string : Fragment
+        # frags: {string : Fragment}
         self.frags = {}  # TODO should we call them preorders?
         self.numPairs = 0
         self.allnouns = {}   # a dict of wordAsStr(upper) : LeafNode; ONLY 'N' here, no 'NP'
@@ -143,16 +143,24 @@ class Knowledge:
         # read in pairs.txt in ./k
         with open('./k/pairs.txt') as f:
             for line in f:
-                syntacticType = line[0]  # N or V
+                if line.startswith('#'):
+                    continue
 
-                if syntacticType == 'V':
-                    # we don't know it's transitive or intransitive
-                    # so make it None for now
+                syntacticType = line.split(':')[0]  # N or V (or NP)
+
+                if syntacticType == 'Vt':
+                    # make it None for now
                     # TODO but need to add this information in getMono.CCGtree.replacement()
-                    syntacticType = None
+                    syntacticType = r'(S\NP)/NP'
+                    pos = 'V'
+                elif syntacticType == 'Vi':
+                    syntacticType = r'S\NP'
                     pos = 'V'
                 elif syntacticType == 'N':
                     pos = 'N'
+                else:
+                    print('cannot handle syntactic type in pairs:', syntacticType)
+                    sys.exit(1)
 
                 relationPair = line[2:].split('<')  # [' dog ', ' animal ']
                 try:
@@ -171,11 +179,11 @@ class Knowledge:
                                          pos=pos, span=None, start=None,
                                          word=relationPair[0].strip())
                 big = getMono.LeafNode(depth=0,
-                                         cat=getMono.Cat(originalType=syntacticType,
-                                                         word=relationPair[1].strip()),
-                                         chunk=None, entity=None, lemma=None,
-                                         pos=pos, span=None, start=None,
-                                         word=relationPair[1].strip())
+                                       cat=getMono.Cat(originalType=syntacticType,
+                                                       word=relationPair[1].strip()),
+                                       chunk=None, entity=None, lemma=None,
+                                       pos=pos, span=None, start=None,
+                                       word=relationPair[1].strip())
 
                 # add N to self.allnouns
                 if syntacticType == 'N':
@@ -189,8 +197,6 @@ class Knowledge:
 
                 self.addPair((small, big))
         print('...done!\n')
-        # print(self.frags)
-        # print(self.frags['APPLE'].big)
         # print(self.allnouns)
 
     def buildSubsecAdj(self):
@@ -246,18 +252,18 @@ class Knowledge:
         print('\ntrees read in from sentences4k.candc.xml!\n')
 
         for idx, t in knowledgetrees.trees.items():
-            # print('sent', idx)
             t.fixTree()
             t.getPM()
             t.polarize()
+
+            print('isA relation:', end=' ')
+            t.printSent()
+            print()
 
             subj, pred = t.getSubjPredISA()  # subj, pred are LeafNode or NonTermNode
 
             # if these is ISA relation
             if (subj is not None) and (pred is not None):
-                # print('subj:', subj, subj.wholeStr)
-                # print('pred:', pred, pred.wholeStr)
-
                 # add N to self.allnouns
                 for node in [subj, pred]:
                     try:
@@ -294,6 +300,12 @@ class Knowledge:
                 some.parent = someDogNode; predCopy.parent = someDogNode
                 some.sisters = [predCopy]; predCopy.sisters = [some]
 
+                # make them +
+                everyDogNode.cat.semCat.pm = '+'
+                someDogNode.cat.semCat.pm = '+'
+                # print('everyDogNode:', everyDogNode)
+                # print('someDogNode:', someDogNode)
+
                 # initialize the trees
                 everyDogTree = getMono.CCGtree(NonTermNode=everyDogNode)
                 someDogTree = getMono.CCGtree(NonTermNode=someDogNode)
@@ -307,6 +319,9 @@ class Knowledge:
         print('...done!\n')
 
     def buildSelfDef(self):
+        '''
+        self-defined < relations
+        '''
         every = getMono.LeafNode(depth=0, cat=getMono.Cat('NP/N', word='every'),
                                  chunk=None, entity=None,
                                  lemma='every', pos='DT', span=None, start=None,

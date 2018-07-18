@@ -18,6 +18,7 @@ Hai Hu, Feb, 2018
 '''
 
 import sys, os, re, copy
+from sys import exit
 from bs4 import BeautifulSoup
 from IPython.display import Markdown, display
 
@@ -187,6 +188,13 @@ class CCGtree():
             self.leafNodes.append(node)
         else:
             self.nonTermNodes.append(node)
+            # take care of sisters
+            if len(node.children) == 1:
+                node.children[0].sisters = []
+            else:
+                node.children[0].sisters = [node.children[1]]
+                node.children[1].sisters = [node.children[0]]
+            # recurse
             for child in node.children:
                 child.parent = node
                 self.buildFromRootHelper(child)
@@ -236,8 +244,10 @@ class CCGtree():
 
     def printAllInferences(self):
         '''  print all inferences of a ccgtree   '''
+        print('\n-- original sentence:\n')
+        self.printSent()
         self.printAllInferencesHelper(self, 1)
-        print('{} inferences in total'.format(self.numInfTotal))
+        print('\n-- {} inferences in total'.format(self.numInfTotal))
 
     def printAllInferencesHelper(self, ccgtree, level):
         if len(ccgtree.inferences) == 0:
@@ -257,8 +267,6 @@ class CCGtree():
 
     def replacement(self, k):
         '''  replacement for inference; k is knowledge  '''
-        # print('k.frags.keys():')
-        # print(k.frags.keys())
         # newNodes is a list. there might be multiple things to replace in each run.
         # e.g. beagle < [dog, animal]
         newNodes = None
@@ -274,17 +282,27 @@ class CCGtree():
 
                 # TODO check if POS/cat is the same??
                 # check the monotonicity to see whether can replace
-                if (node.cat.monotonicity == 'UP') and (len(k.frags[node.wholeStr].big)!=0):
+                # make sure cat is the same: e.g. NP = NP
+                if (node.cat.monotonicity == 'UP') and \
+                        (len(k.frags[node.wholeStr].big) != 0) and \
+                        node.cat.typeWOfeats == \
+                                k.frags[node.wholeStr].ccgtree.root.cat.typeWOfeats:
                     # replace node with the first thing bigger than it
                     # print('\nfound a node to replace:', node.wholeStr)
                     # print('replace it with        :', k.frags[node.wholeStr].big[0].ccgtree.root.wholeStr)
-                    newNodes = k.frags[node.wholeStr].big  #[0].ccgtree.root
+                    # print('cat must be the same:')
+                    # print(node.cat.typeWOfeats)
+                    # print(k.frags[node.wholeStr].ccgtree.root.cat.typeWOfeats)
+                    newNodes = k.frags[node.wholeStr].big  # a list
 
-                if (node.cat.monotonicity == 'DOWN') and (len(k.frags[node.wholeStr].small)!=0):
-                    # replace node with the first thing smaller than it
-                    # print('\nfound a node to replace:', node.wholeStr)
-                    # print('replace it with        :', k.frags[node.wholeStr].small[0].ccgtree.root.wholeStr)
-                    newNodes = k.frags[node.wholeStr].small  #[0].ccgtree.root
+                if (node.cat.monotonicity == 'DOWN') and \
+                        (len(k.frags[node.wholeStr].small)!=0) and \
+                        node.cat.typeWOfeats == \
+                                k.frags[node.wholeStr].ccgtree.root.cat.typeWOfeats:
+                    # print('cat must be the same:')
+                    # print(node.cat.typeWOfeats)
+                    # print(k.frags[node.wholeStr].ccgtree.root.cat.typeWOfeats)
+                    newNodes = k.frags[node.wholeStr].small  # a list
 
                 if newNodes is not None:
                     for newNode in newNodes:  # newNode is a Fragment
@@ -343,6 +361,102 @@ class CCGtree():
         if len(self.inferences) == 0:
             newTree = None  # release mem
             print('Nothing for replacement')
+
+    def replaceRC(self):
+        '''
+        e.g. some young man [who likes dogs] likes cats
+        infer: some man likes cats
+        Remove restrictive RC if it has *UP* polarity; then add to
+         CCGTree.inferences
+        '''
+        # detect all nonTermNodes which are RCs with polarity *UP*:
+        RCs = []
+        for node in self.nonTermNodes:
+            if node.cat.typeWOfeats == r'NP\NP' and \
+                node.children[0].wholeStr.upper() in ['THAT','WHO','WHOM','WHICH']:
+                if node.cat.monotonicity == 'UP':
+                    RCs.append(node)
+
+        # remove RC and add to inferences
+
+        # old tree:
+        #   N young man      NP\NP who likes dogs => RC
+        #  ------------lex
+        #    NP  => NP1
+        #   ----------------------------- fa
+        #                 NP  => NP2
+        #             ---------unlex (my rule)
+        #  NP/N some      N
+        #  ------------------
+        #        NP
+
+        # now we want to move NP1 to NP2
+        #            N young man
+        #           ------------lex
+        #                NP
+        #             ---------unlex (my rule)
+        #  NP/N some      N
+        #  ------------------
+        #        NP
+
+        for RC in RCs:
+            # initialize new tree
+            newTree = copy.deepcopy(self)
+            newTree.inferences = []
+
+            # get index of RC in nonTermNodes
+            ind = self.nonTermNodes.index(RC)
+            RC  = newTree.nonTermNodes[ind]  # RC should be in newTree
+
+            # get NP1 and NP2
+            node_NP1 = RC.sisters[0]
+            node_NP2 = RC.parent
+            # # remove NP1, NP2 from nonTermNodes
+            # newTree.nonTermNodes.remove(node_NP1)
+            # newTree.nonTermNodes.remove(node_NP2)
+            # # remove all descendants of RC
+            # des = newTree.getAllDescendants(RC)  # including RC
+            # for node in des:
+            #     if len(node.children) == 0:  # leafNode
+            #         newTree.leafNodes.remove(node)
+            #     else:  # nonTermNode
+            #         newTree.nonTermNodes.remove(node)
+
+            # adjust pointer
+            # indNP2 is the index of NP2 in NP2.parent.children
+            indNP2 = node_NP2.parent.children.index(node_NP2)
+            node_NP2.parent.children[indNP2] = node_NP1
+            node_NP1.parent = node_NP2.parent
+
+            # rebuild the tree; this takes care of:
+            # self.nonTermNodes, self.leafNodes and self.allNodes
+            newTree.buildFromRoot()
+            newTree.regetDepth()
+            newTree.getPM()
+            newTree.polarize()
+
+            # sanity check
+            # newTree.printSent()
+            # newTree.printTree()
+            # print(len(newTree.leafNodes))
+            # print(len(newTree.nonTermNodes))
+            # print(len(newTree.allNodes))
+
+            self.inferences.append(newTree)
+
+    def getAllDescendants(self, nonTermNode):
+        '''
+        Returns a list of all descendants of a nonTermNode (including itself)
+        '''
+        des = []
+        self.getAllDescendantsHelper(nonTermNode, des)
+        return des
+
+    def getAllDescendantsHelper(self, node, des):
+        des.append(node)
+        if len(node.children) > 0:
+            for child in node.children:
+                self.getAllDescendantsHelper(child, des)
 
     def getPM(self):
         ''' add plus minus to all nodes '''
@@ -426,7 +540,6 @@ class CCGtree():
             elif token.word.upper() == 'IT':
                 token.cat.semCat.pm = '+'
 
-            # TODO 'most'
             # most N/N: most dogs, then N (most dogs) has a lex rule --> NP
             # at most: (S/S)/(S[asup=true]\NP) S[asup=true]\NP
             elif token.word.upper() == 'MOST':
@@ -434,8 +547,9 @@ class CCGtree():
                 pass
 
             # that, who; (token.pos == 'WDT') necessary?
-            elif token.word.upper() in ['THAT', 'WHO'] and (token.pos in ['WDT', 'IN', 'WP']):
-                # already handled in Cat()
+            elif token.word.upper() in ['THAT', 'WHO'] and \
+                    (token.pos in ['WDT', 'IN', 'WP']):
+                # !! already handled in Cat() !! #
                 pass
 
             # verb, then should be + TODO do we really need it?
@@ -522,28 +636,24 @@ class CCGtree():
         #        -------------------------- conj
         # NP(sister)           NP\NP(parent)
         # ----------------------------------- fa/ba
-        #             NP
+        #             NP(grandparent)
 
         # if conj is left, then make conj (X\X)/X
         try:
             if left.pos.upper() == 'CC':
-                # print(right.cat.semCat)
-                # print(sister.cat.semCat)
-                # print(parent.cat.semCat)
                 # !! assign parent.OUT pm !! #
                 if (right.cat.semCat.pm is None) or (sister.cat.semCat.pm is None):
-                    parent.cat.semCat.OUT.pm = None  # this will be GRAND PARENT
+                    parent.cat.semCat.OUT.pm = None  # this will be grandparent NP
                 # if right.pm == parent.sister.pm != None, then parent.parent = that pm
                 elif right.cat.semCat.pm == sister.cat.semCat.pm:
                     parent.cat.semCat.OUT.pm = right.cat.semCat.pm
                 else:
                     parent.cat.semCat.OUT.pm = None
-                    # print(parent.cat.semCat)
 
-            else:  # right is conj
+            else:  # right is conj; this should in theory never happen
                 # !! assign parent.OUT pm !! #
                 if (left.cat.semCat.pm is None) or (sister.cat.semCat.pm is None):
-                    parent.cat.semCat.OUT.pm = None  # this will be GRAND PARENT
+                    parent.cat.semCat.OUT.pm = None  # this will be grandparent NP
                 # if left.pm == parent.sister.pm != None, then parent.parent = that pm
                 elif left.cat.semCat.pm == sister.cat.semCat.pm:
                     parent.cat.semCat.OUT.pm = left.cat.semCat.pm
@@ -604,7 +714,12 @@ class CCGtree():
                 # Y X\Y -> X
                 # make sure input and output of BA is correct
                 assert parent.cat.semCat.semCatStr == right.cat.semCat.OUT.semCatStr
-                assert right.cat.semCat.IN.semCatStr == left.cat.semCat.semCatStr
+                try:
+                    assert right.cat.semCat.IN.semCatStr == left.cat.semCat.semCatStr
+                except AssertionError:
+                    print(right)
+                    print(left)
+                    self.printTree()
 
                 # --- FOR RELATIVE CLAUSES --- #
                 # TODO: COULD BE DELETED since fixTree() fixes the RC
@@ -925,7 +1040,6 @@ class CCGtree():
         elif monoDirection == 'DOWN':
             return 'UP'
         else:
-            print('cannot flip monoDirection!')
             return 'UNK'
 
     def build(self, ccgXml):
@@ -1295,7 +1409,7 @@ class Cat():
         self.originalType = None # (S\+NP)/+NP as a string, or NP[nb]/N
         self.typeWOpolarity = None # (S\NP)/NP as a string
         self.typeWOfeats = None # get rid of extra features like [nb]: NP/N
-        self.monotonicity = None # [up, down]
+        self.monotonicity = None # [UP, DOWN]
         self.lex_polarity = None # [i, r], c.f. van Eijck's algorithm
         self.word = word # if it's the cat of a leafNode, then it has word
         # ------- SEMANTIC CAT ------- #
