@@ -68,6 +68,7 @@ two replacements will result in:
 
 ## TODO
 Add visualization to the final monotonicity output.
+
 Handle more cases in inference.
 
 ## Cite

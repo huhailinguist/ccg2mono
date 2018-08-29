@@ -24,6 +24,9 @@ from IPython.display import Markdown, display
 
 # uparrow: U+2191, down arrow: U+2193
 
+__author__ = "Hai Hu; Larry Moss"
+__email__ = "huhai@indiana.edu; lmoss@indiana.edu"
+
 helpM = '''
 Usage: python3 getMono.py (sentNo.) (v1/v2/v3/vall)
 
@@ -133,7 +136,6 @@ class CCGtree():
     2. print out the tree
 
     '''
-    # def __init__(self, ccgXml=None):
     def __init__(self, **kwargs):
         self.leafNodes = []; self.words = []; self.nonTermNodes = []
         self.root = None
@@ -324,9 +326,6 @@ class CCGtree():
                                 pass
                             else:  # e.g. both are N
                                 newNode.pos = node.pos; newNode.cat = node.cat
-                                # print(newNode.pos, newNode.cat)
-                                # print(node.pos, node.cat)
-                                # print()
                         except AttributeError:  # NonTermNode does not have pos
                             # print(newNode.cat, node.cat)
                             pass
@@ -411,16 +410,6 @@ class CCGtree():
             # get NP1 and NP2
             node_NP1 = RC.sisters[0]
             node_NP2 = RC.parent
-            # # remove NP1, NP2 from nonTermNodes
-            # newTree.nonTermNodes.remove(node_NP1)
-            # newTree.nonTermNodes.remove(node_NP2)
-            # # remove all descendants of RC
-            # des = newTree.getAllDescendants(RC)  # including RC
-            # for node in des:
-            #     if len(node.children) == 0:  # leafNode
-            #         newTree.leafNodes.remove(node)
-            #     else:  # nonTermNode
-            #         newTree.nonTermNodes.remove(node)
 
             # adjust pointer
             # indNP2 is the index of NP2 in NP2.parent.children
@@ -562,6 +551,10 @@ class CCGtree():
             elif token.cat.originalType == 'NP':
                 token.cat.semCat.pm = '+'
 
+            # prepositions like 'in' (as an argument, as in 'He puts it in the box')
+            elif token.cat.typeWOfeats == 'PP/NP':
+                token.cat.semCat.pm = '+'
+
     def getPM_NTN2(self):
         # another way of getting pm for non terminal nodes
         # we go from every leaf to root, for every node n along the path:
@@ -688,12 +681,10 @@ class CCGtree():
                 # we want 'John' to be NP+
                 node.parent.cat.semCat.pm = '+'
             elif node.parent.ruleType == 'unlex':
-                # NP -> N: rule added by myself, for RC, do nothing
-                # print('*** unlex rule ***')
+                # NP -> N: rule added by me, for RC, do nothing
                 pass
             else:  # terminal node
                 pass
-
 
         # if I got one sister
         elif len(node.sisters) == 1:
@@ -903,18 +894,6 @@ class CCGtree():
                         self.polarizeHelper(right, monoDirection)
                     self.polarizeHelper(left, self.calcMono(right, monoDirection))
 
-                # # K rule:
-                # print('\n\n-----right-----')
-                # print(right)
-                # print(right.cat.semCat.IN.semCatStr, right.cat.semCat.IN.pm)
-                # if right.cat.semCat.IN.semCatStr == '((e,t),t)' and \
-                #     right.cat.semCat.IN.pm == '-': # NP and -
-                #     # then flip monotonicity
-                #     print('flip!')
-                #     self.flip(monoDirection)
-                #     right.cat.monotonicity = self.calcMono('-', right.cat.monotonicity)
-                # print('-----right-----\n\n')
-            
             elif node.ruleType == 'fa':  # X/Y Y --> X
                 try:
                     if left.ruleType.upper() == 'CONJ':
@@ -1248,20 +1227,18 @@ class CCGtree():
         ------
            A
            -------------
-                 B               getLeftMostLeaf(B) will return X
+                 B               
+        getLeftMostLeaf(B) will return X
         '''
         while len(node.children) != 0:
-            # print(len(node.children))
             node = node.children[0]
         return node
 
     def decreaseDepth(self, node):
         node.depth -= 1
-        if len(node.children) == 0:
-            return
+        if len(node.children) == 0: return
         else:
-            for n in node.children:
-                self.decreaseDepth(n)
+            for n in node.children: self.decreaseDepth(n)
 
     def buildHelper(self, nodeXml, Node, depth):
         for childXml in nodeXml.find_all(re.compile('(lf|rule)'), recursive=False):
