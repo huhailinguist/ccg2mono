@@ -13,37 +13,36 @@ For example:
 ## Preparation
 You need several things to run our program.
 
-1. Install [C&C parser](http://www.cl.cam.ac.uk/~sc609/candc-1.00.html). You can just download the precompiled binaries and the models (models trained on CCGbank 02-21 and MUC 7, 50MB) from the webpage. Then copy the paths of the binaries and models to lines 18 and 19 in *candcParse\_visualize.sh*.
+1. Install [C&C parser](http://www.cl.cam.ac.uk/~sc609/candc-1.00.html). 
+You can just download the precompiled binaries and the models 
+(models trained on CCGbank 02-21 and MUC 7, 50MB) from the webpage. 
 
-2. Clone the repo [ccg2lambda](https://github.com/mynlp/ccg2lambda) to your machine. Copy the path of ccg2lambda to line 20 in *candcParse\_visualize.sh*.
+2. Clone [easyccg](https://github.com/mikelewis0/easyccg) to your machine. 
 
-3. Install some python packages (for visualizing trees in ccg2lambda) by typing `pip3 install lxml simplejson pyyaml`.
+2. Clone the repo [ccg2lambda](https://github.com/mynlp/ccg2lambda) 
+to your machine. 
+
+3. Install some python packages (for visualizing trees in ccg2lambda) by 
+typing `pip3 install lxml simplejson pyyaml`.
+
+4. Finally copy the paths of the CandC binaries and models, easyccg, and 
+ ccg2lambda to *parse.sh*.
 
 Then you are ready to go. 
 
-## getMono
+## Polarize
 
-*getMono.py* takes in CCG parse trees and polarize each constituent. 
-
-To do so, first put your sentence in a file (e.g. test). Then type the following to parse the sentences using C&C parser:
+*parse.sh* is a shell script that does parsing, polarizing al together. 
 
 ```bash
-./candcParse_visualize.sh test
+./parse.sh sentences.txt parser
 ```
 
-There will be two important output files: *test_candcParsed.html* and *tmp.xml*.
+where parser can be: `candc` or `easyccg`.
 
-- *test_candcParsed.html* is a visualiztion of the parse trees. You can check whether the sentences are parsed correctly by just using a browser to open the file.
-
-- *tmp.xml* contains the xml format of the parses, which our program work with.
-
-Now you can run 
-
-```bash
-./getMono.py (sentNo) (-vall for verbose, i.e. print the trees)
-``` 
-
-and get the monotonicity of your sentences in STDOUT. For commandline parameters of this python script, please type `./getMono.py -h`
+Depending on the parser you selected,  you will either see
+`tmp.candc_pretty.html` or `tmp.easyccg_pretty.html`, which is polarized 
+output. 
 
 ## infer
 *infer.py* first reads in 3 knowledge representations from the folder k:
@@ -86,7 +85,7 @@ Handle more cases in inference.
 Or this which has a description of how _inference_ work in our system:
  
 ```
-@InProceedings{humoss2018,
+@InProceedings{huEtAl2018,
   author    = {Hu, Hai and Icard III, Thomas and Moss, Lawrence S.},
   title     = {Automated Reasoning from Polarized Parse Trees},
   booktitle = {Proceedings of the Fifth Workshop on Natural Language and Computer Science},
