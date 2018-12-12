@@ -60,11 +60,6 @@ if [ $2 == "candc" ]; then
     ./mytree2transccg.py candc > ${outputDir}/${OUTname}.candc2transccg.xml > \
     ${outputDir}/${OUTname}.candc2transccg.xml
 
-    # convert to transccg
-    # python3 ${ccg2lambdaDir}/en/candc2transccg.py \
-    # ${outputDir}/${OUTname}.candc.parsed.xml > \
-    # ${outputDir}/${OUTname}.candc2transccg.xml
-
     # to html
     python3 ${ccg2lambdaDir}/scripts/visualize.py \
     ${outputDir}/${OUTname}.candc2transccg.xml > \

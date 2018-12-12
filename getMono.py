@@ -537,6 +537,9 @@ class CCGtree():
 
     def assignEqualMarkingTRHelper(self, semCat1, semCat2):
         """ assign equal markings, used for post-processing 2 y's in 'tr' rule
+            x
+        ---------tr
+        (x-->y)-->y
         e.g. semCat1: (((e,t),t),+t) semCat2: (((e,t),-t),t)
         result: semCat1 = semCat2 = (((e,t),-t),+t)
         """
@@ -559,11 +562,24 @@ class CCGtree():
         ''' add plus minus to all nodes '''
         self.mark_LeafNodes()
         self.mark_NTN()
+
+        # post-processing
         self.assignEqualMarkingTR()
+
+        # equate markings if needed
+        # TODO more compliccated than I thought
+        # TODO have to propogate much further up the tree
+        for node in self.leafNodes + self.nonTermNodes:
+            if node.cat:  # if not None
+                if node.cat.typeWOfeats == r'(S\NP)/(S\NP)':
+                    eprint('equate marking:', node)
+                    self.equate_marking(node.cat.semCat.IN, node.cat.semCat.OUT)
+                    eprint('after equate marking:', node)
 
     def mark_LeafNodes(self):
         ''' mark leaf nodes '''
         for token in self.leafNodes:
+            # -----------------------
             # quantifiers
             if token.word.upper() in ['SOME', 'A', 'AN']:  # + +
                 # if token.cat.semCat.semCatStr == '((e,t),((e,t),t))':
@@ -577,45 +593,51 @@ class CCGtree():
                 # if token.cat.semCat.semCatStr == '((e,t),((e,t),t))':
                 token.cat.semCat.marking = '-'
                 token.cat.semCat.OUT.marking = '-'
+            # TODO other DTs: a, the, this, that?
 
-            # negation
+            # -----------------------
+            # TODO negation
             elif token.word.upper() in ['NOT', "N'T"]:  # N'T: (S\NP)\(S\NP)
                 token.cat.semCat.marking = '-'  # check semCatStr??
                 # TODO is this correct?
                 token.cat.semCat.OUT.marking = '+'
                 token.cat.semCat.IN.marking = '+'
                 # token.cat.semCat.OUT.IN.marking = '+'  # (S+\NP+)-\(S+\NP)
-                token.cat.semCat.IN.IN.marking = '+'  # (S+\NP)-\(S+\NP+)
+                # token.cat.semCat.IN.IN.marking = '+'  # (S+\NP)-\(S+\NP+)
 
-            # adjectives, add +
-            elif token.pos.upper() == 'JJ':
+            # -----------------------
+            # TODO nouns
+            # if the leafNode is NP, e.g. pronouns such as I, make it NP+
+            elif token.cat.originalType == 'NP':
+                token.cat.semCat.marking = '+'
+                # token.cat.semCat.OUT.marking = token.cat.semCat.IN.marking = '+'
+            elif token.word.upper() == 'IT':
                 token.cat.semCat.marking = '+'
 
-            # or noun as noun modifiers, add +
+            # -----------------------
+            # TODO noun can be: N/(S\NP)
+            # e.g. the `right` to live in Europe
             elif (token.pos.upper() == 'NN') and \
-                    (token.cat.typeWOfeats == r'N/N'):
+                    (token.cat.typeWOfeats == r'N/(S\NP)'):
                 token.cat.semCat.marking = '+'
+                token.cat.semCat.IN.marking = '+'
+                token.cat.semCat.IN.IN.marking = '+'
 
-            # TODO other DTs: a, the, this, that?
-
+            # -----------------------
             # if = (t,-(t,+t))
             elif token.word.upper() == 'IF':
                 token.cat.semCat.marking = '-'
                 token.cat.semCat.OUT.marking = '+'
-
             elif token.word.upper() == 'THEN':
                 token.cat.semCat.marking = '+'
 
-            elif token.word.upper() == 'IT':
-                token.cat.semCat.marking = '+'
-
-            # that, who; (token.pos == 'WDT') necessary?
+            # that, who
             elif token.word.upper() in ['THAT', 'WHO', 'WHICH'] and \
                     (token.pos in ['WDT', 'IN', 'WP']):
                 # !! already handled in Cat() !! #
                 pass
 
-            # verbs
+            # TODO verbs
             elif token.pos.upper().startswith('VB'):
                 # TODO add monotone DOWN verbs
                 if token.lemma.upper() in ['REFUSE', 'FAIL'] and \
@@ -638,19 +660,27 @@ class CCGtree():
                         # 'did' in 'did not', 'want' in I want to go
                         token.cat.semCat.OUT.marking = '+'
                         token.cat.semCat.IN.marking = '+'  # (S+\NP)+/(S+\NP)
-                        token.cat.semCat.IN.IN.marking = '+'   # (S+\NP)+/(S+\NP+)
+                        # token.cat.semCat.IN.IN.marking = '+'   # (S+\NP)+/(S+\NP+)
                         # token.cat.semCat.OUT.IN.marking = '+'  # (S+\NP+)+/(S+\NP)
                     if token.cat.typeWOfeats == r'(S\NP)/PP':  # 'ask' as in 'ask about'
                         token.cat.semCat.OUT.marking = '+'
 
-            # TODO
+            # TODO model verbs
+            elif token.pos.upper() == 'MD':
+                # can: (S\NP)/(S\NP)
+                token.cat.semCat.marking = '+'
+                token.cat.semCat.IN.marking = '+'  # ??
+                token.cat.semCat.OUT.marking = '+'  # ??
+
+            # TODO to
             elif (token.pos.upper() == 'TO') and \
                     (token.cat.typeWOfeats == r'(S\NP)/(S\NP)'):
-                # 'to' in 'I want to', 'refused to'
+                # 'to' in 'I want to', 'refused to' # (S+\NP)+/(S+\NP)
                 token.cat.semCat.marking = '+'
-                token.cat.semCat.OUT.marking = token.cat.semCat.IN.marking = '+'
-                token.cat.semCat.OUT.IN.marking = '+'
-                token.cat.semCat.IN.IN.marking = '+'  # (S+\NP+)+/(S+\NP+)
+                token.cat.semCat.OUT.marking = '+'
+                token.cat.semCat.IN.marking = '+'
+                # token.cat.semCat.OUT.IN.marking = '+'
+                # token.cat.semCat.IN.IN.marking = '+'  # (S+\NP+)+/(S+\NP+)
 
             # TODO adverbs 1
             elif (token.pos.upper() == 'RB') and \
@@ -665,34 +695,46 @@ class CCGtree():
             elif (token.pos.upper() == 'RB') and \
                     (token.cat.typeWOfeats in [r'S\NP']) and \
                     (token.word.upper() not in ['NOT', "N'T"]):
-                # adverbs; make it (S+\NP)+/(S+\NP)
+                # adverbs; make it S+\NP
                 token.cat.semCat.marking = '+'
 
-            # if the leafNode is NP, e.g. pronouns such as I, make it NP+
-            elif token.cat.originalType == 'NP':
+            # -----------------------
+            # TODO adjectives, add +
+            elif (token.pos.upper() == 'JJ') and \
+                    (token.word.upper() not in ['FAKE']):
                 token.cat.semCat.marking = '+'
-                # token.cat.semCat.OUT.marking = token.cat.semCat.IN.marking = '+'
 
-            # PREPOSITIONS
-            # prepositions like 'in' as an argument, as in 'He puts it in the box'
-            elif token.word.upper() in ['IN', 'ON', 'TO', 'FROM']:
+            # noun as noun modifiers, add +
+            elif (token.pos.upper() in ['NN', 'NNP']) and \
+                    (token.cat.typeWOfeats == r'N/N'):
+                token.cat.semCat.marking = '+'
+
+            # TODO prepositions
+            elif token.word.upper() in {'IN', 'ON', 'TO', 'FROM', 'FOR',
+                                        'WITHIN'}:
+                # prepositions like 'in' as an argument, as in 'He puts it in the box'
                 if token.cat.typeWOfeats == 'PP/NP':
                     token.cat.semCat.marking = '+'  # make it PP/+NP'
+
                 # 'in' as an adjunct as in 'John sleeps in France'
                 # 'to' as in 'go to bed'
                 elif token.cat.typeWOfeats == r'((S\NP)\(S\NP))/NP':
-                    # make it ((S\NP+)+\(S\NP+))+/NP
+                    # TODO important!! the first 2 NPs should be None
+                    # make it ((S+\NP)+\(S+\NP))+/NP
                     token.cat.semCat.marking = '+'
                     token.cat.semCat.OUT.marking = '+'
                     token.cat.semCat.OUT.OUT.marking = '+'
-                    token.cat.semCat.OUT.IN.IN.marking = '+'
-                    token.cat.semCat.OUT.OUT.IN.marking = '+'
+                    token.cat.semCat.OUT.IN.marking = '+'
+                    # token.cat.semCat.OUT.IN.IN.marking = '+'
+                    # token.cat.semCat.OUT.OUT.IN.marking = '+'
+
                 # 'in' as a modifier for nouns as in 'the man in France sleeps'
                 # candc: (NP\NP)/NP; easyccg: (N\N)/NP
                 elif token.cat.typeWOfeats in [r'(NP\NP)/NP', r'(N\N)/NP']:
                     # make it (NP+\NP)+/NP
                     token.cat.semCat.marking = '+'
                     token.cat.semCat.OUT.marking = '+'
+
                 # 'in' in a PP that serves as sentential adverb, as in 'In theory, ...'
                 elif token.cat.typeWOfeats in [r'(S/S)/NP', r'(S\S)/NP']:
                     # make it (S+/S)+/NP
@@ -704,8 +746,8 @@ class CCGtree():
                     token.cat.semCat.OUT.marking = '+'
                     token.cat.semCat.OUT.IN.marking = '+'
                     token.cat.semCat.OUT.OUT.marking = '+'
-                    token.cat.semCat.OUT.IN.IN.marking = '+'
-                    token.cat.semCat.OUT.OUT.IN.marking = '+'  # ((S+\NP+)+\(S+\NP+))-/NP
+                    # token.cat.semCat.OUT.IN.IN.marking = '+'
+                    # token.cat.semCat.OUT.OUT.IN.marking = '+'  # ((S+\NP+)+\(S+\NP+))-/NP
 
     def mark_NTN(self):
         ''' mark non terminal node '''
@@ -743,8 +785,6 @@ class CCGtree():
             parent = node.parent
             left = parent.children[0]
             right = parent.children[1]
-            # print('\n\nnode:', node)
-            # print('sister:', sister)
             if left.visited and right.visited: pass
             # whoever is not visited, we should recurse down
             elif left.visited and (not right.visited):
@@ -771,7 +811,7 @@ class CCGtree():
         node.visited = True
 
     def mark_NTN_myparent(self, node):
-        ''' get the marking of node.parent '''
+        ''' assign the marking of node.parent '''
 
         # if I'm single child, then rule can be 'lex', 'tr', 'unlex'
         if len(node.sisters) == 0:
@@ -826,7 +866,7 @@ class CCGtree():
                 # make sure input and output of FA is correct
                 assert parent.cat.semCat.semCatStr == left.cat.semCat.OUT.semCatStr
                 assert left.cat.semCat.IN.semCatStr == right.cat.semCat.semCatStr
-                parent.cat.semCat = left.cat.semCat.OUT  # ASSIGN PM
+                parent.cat.semCat = left.cat.semCat.OUT  # assign marking
 
                 # TODO comparator
                 self.compareSemCat(left.cat.semCat.IN, right.cat.semCat, parent)
@@ -849,7 +889,7 @@ class CCGtree():
                     right.cat.semCat.OUT.marking = left.cat.semCat.marking
                 # --- END: FOR RELATIVE CLAUSES --- #
 
-                parent.cat.semCat = right.cat.semCat.OUT  # ASSIGN PM
+                parent.cat.semCat = right.cat.semCat.OUT  # assign marking
 
                 # TODO comparator
                 self.compareSemCat(right.cat.semCat.IN, left.cat.semCat, parent)  # IMPORTANT
@@ -863,8 +903,8 @@ class CCGtree():
                     # make sure input and output of BX is correct
                     assert parent.cat.semCat.IN.semCatStr == right.cat.semCat.IN.semCatStr
                     assert parent.cat.semCat.OUT.semCatStr == left.cat.semCat.OUT.semCatStr
-                    parent.cat.semCat.IN = right.cat.semCat.IN  # ASSIGN PM
-                    parent.cat.semCat.OUT = left.cat.semCat.OUT  # ASSIGN PM
+                    parent.cat.semCat.IN = right.cat.semCat.IN  # assign marking
+                    parent.cat.semCat.OUT = left.cat.semCat.OUT  # assign marking
                     # TODO comparator here
                     self.compareSemCat(left.cat.semCat.IN, right.cat.semCat.OUT, parent)
                     # left.cat.semCat.IN = right.cat.semCat.OUT
@@ -875,14 +915,14 @@ class CCGtree():
                     # make sure input and output of BX is correct
                     assert parent.cat.semCat.IN.semCatStr == left.cat.semCat.IN.semCatStr
                     assert parent.cat.semCat.OUT.semCatStr == right.cat.semCat.OUT.semCatStr
-                    parent.cat.semCat.IN = left.cat.semCat.IN  # ASSIGN PM
-                    parent.cat.semCat.OUT = right.cat.semCat.OUT  # ASSIGN PM
+                    parent.cat.semCat.IN = left.cat.semCat.IN  # assign marking
+                    parent.cat.semCat.OUT = right.cat.semCat.OUT  # assign marking
 
                     # TODO comparator here
                     self.compareSemCat(right.cat.semCat.IN, left.cat.semCat.OUT, parent)
                     # right.cat.semCat.IN = left.cat.semCat.OUT
 
-                # ASSIGN PM
+                # assign marking
                 # if at least one of them is None (i.e. dot), result = None:
                 if (right.cat.semCat.marking is None) or (left.cat.semCat.marking is None):
                     parent.cat.semCat.marking = None
@@ -897,8 +937,8 @@ class CCGtree():
                     # make sure input and output of fc is correct
                     assert parent.cat.semCat.IN.semCatStr == right.cat.semCat.IN.semCatStr
                     assert parent.cat.semCat.OUT.semCatStr == left.cat.semCat.OUT.semCatStr
-                    parent.cat.semCat.IN = right.cat.semCat.IN  # ASSIGN PM
-                    parent.cat.semCat.OUT = left.cat.semCat.OUT  # ASSIGN PM
+                    parent.cat.semCat.IN = right.cat.semCat.IN  # assign marking
+                    parent.cat.semCat.OUT = left.cat.semCat.OUT  # assign marking
                     # TODO comparator here
                     self.compareSemCat(left.cat.semCat.IN, right.cat.semCat.OUT, parent)
                     # left.cat.semCat.IN = right.cat.semCat.OUT
@@ -907,13 +947,13 @@ class CCGtree():
                 else:
                     assert parent.cat.semCat.IN.semCatStr == left.cat.semCat.IN.semCatStr
                     assert parent.cat.semCat.OUT.semCatStr == right.cat.semCat.OUT.semCatStr
-                    parent.cat.semCat.IN = left.cat.semCat.IN  # ASSIGN PM
-                    parent.cat.semCat.OUT = right.cat.semCat.OUT  # ASSIGN PM
+                    parent.cat.semCat.IN = left.cat.semCat.IN  # assign marking
+                    parent.cat.semCat.OUT = right.cat.semCat.OUT  # assign marking
                     # TODO comparator here
                     self.compareSemCat(right.cat.semCat.OUT, left.cat.semCat.IN, parent)
                     # right.cat.semCat.OUT = left.cat.semCat.IN
 
-                # ASSIGN PM
+                # assign marking
                 # if at least one of them is None (i.e. dot), result = None:
                 if (right.cat.semCat.marking is None) or (left.cat.semCat.marking is None):
                     parent.cat.semCat.marking = None
@@ -948,12 +988,6 @@ class CCGtree():
 
         # do this every time when we mark a parent
         self.assignEqualMarkingTR()
-
-        if node.depth != 0:
-            for child in node.parent.children:
-                # eprint('child after:', child)
-                pass
-            # eprint('my parent after:', node.parent)
 
     # TODO still have to re-traverse the tree for conj
 
@@ -1069,31 +1103,48 @@ class CCGtree():
         # eprint('semCat2:', semCat2, semCat2.semCatStr)
 
         # recurse through semCat1 and semCat2 at the same time
-        self.compareSemCatHelper(semCat1, semCat2)
+        self.compareSemCatHelper(semCat1, semCat2, parent)
 
         # eprint('---\nafter:\nsemCat1:', semCat1, semCat1.semCatStr)
         # eprint('semCat2:', semCat2, semCat2.semCatStr)
 
-    def compareSemCatHelper(self, semCat1, semCat2):
+    def compareSemCatHelper(self, semCat1, semCat2, parent):
         """ recursive helper function
         e.g. semCat1 = ((et,-t),((et,t),t))   semCat2 = ((et,t),+((et,t),+t))
         """
         try:
-            assert self.semCatGreater(semCat1, semCat2)
+            assert self.semCatGreater(semCat1, semCat2)  # semCat2 is more specific
             semCat1.marking = semCat2.marking
         except AssertionError:
             eprint(semCat1, semCat2)
             eprint(semCat1.marking, semCat2.marking)
+            eprint("parent: {}".format(parent))
             raise ErrorCompareSemCat("{} not greater than {}".format(semCat1, semCat2))
 
         if semCat1.IN:  # if semCat1.IN is not None
-            self.compareSemCatHelper(semCat2.IN, semCat1.IN)
+            self.compareSemCatHelper(semCat2.IN, semCat1.IN, parent)
         if semCat1.OUT:
-            self.compareSemCatHelper(semCat1.OUT, semCat2.OUT)
+            self.compareSemCatHelper(semCat1.OUT, semCat2.OUT, parent)
 
     def semCatGreater(self, semCat1, semCat2):
         """ semCat1 >= semCat2 iff: """
+        # eprint('compareing: {} and {}'.format(semCat1, semCat2))
         return (semCat1.marking is None) or (semCat1.marking == semCat2.marking)
+
+    def equate_marking(self, semCat1, semCat2):
+        """ to assign the same markings on x, y in type (x, y)
+        e.g. 1. in negation, didn't = (NP->S)->(NP->S) where both (NP->S) should have
+         the same markings
+        e.g. 2. verbs of type (NP->S)->(NP->S) as 'manage' in 'I managed to pass the exam'.
+        """
+        assert semCat1.semCatStr == semCat2.semCatStr
+        if self.semCatGreater(semCat1, semCat2):  # OUT is more specific
+            semCat1.marking = semCat2.marking
+        else: semCat1.marking = semCat2.marking
+
+        # recurse
+        if semCat1.IN: self.equate_marking(semCat1.IN, semCat2.IN)
+        if semCat1.OUT: self.equate_marking(semCat1.OUT, semCat2.OUT)
 
     def Krule(self, functor, monoDirection):
         r"""
@@ -1183,7 +1234,7 @@ class CCGtree():
                     (node.cat.semCat.OUT.IN.semCatStr == '((e,t),t)'):
                 NP2 = node.cat.semCat.OUT.IN
                 if (NP.marking is None) or (NP2.marking is None):
-                    node.cat.originalType += ' ='
+                    node.cat.originalType += ' none'
                 elif [NP.marking, NP2.marking].count('-') == 1:  # 1 -
                     node.cat.originalType += ' flip'
                 else:  # 0 or 2 -
@@ -1193,7 +1244,7 @@ class CCGtree():
                 if NP.marking == '-':  # NP-, flip
                     node.cat.originalType += ' flip'
                 elif NP.marking is None:  # NP=
-                    node.cat.originalType += ' ='
+                    node.cat.originalType += ' none'
                 else:  # NP+
                     pass
         # -----------------------
@@ -1272,11 +1323,9 @@ class CCGtree():
                     eprint(left)
                     eprint(right)
                     raise ErrorCCGtree('unable to polarize conj rule!')
-
             elif node.ruleType in ['rp', 'lp']: # punctuation
                 self.polarizeHelper(left, monoDirection)
                 self.polarizeHelper(right, monoDirection)
-
             else:
                 raise ErrorCCGtree('unknown ruleType in polarize: '
                                    '{}'.format(node.ruleType))
