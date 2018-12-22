@@ -16,7 +16,7 @@ def main():
         sentToTest = int(sys.argv[1]) # sentence to test
         print('sentToTest:',sentToTest)
     trees = getMono.CCGtrees()
-    trees.readCandCxml('tmp.candc.xml')
+    trees.readCandCxml('test_fracas.candc.parsed.xml')  # ('tmp.candc.xml')
 
     # build knowledge
     # k = buildKnowledgeTest() # April 26
@@ -33,7 +33,7 @@ def main():
     t = trees.trees[0]
     if any(x in sys.argv for x in ['-v1', '-vall']):
         t.printTree()
-    t.getPM()
+    t.mark()
     if any(x in sys.argv for x in ['-v2', '-vall']):
         t.printTree()
     t.polarize()
@@ -45,8 +45,8 @@ def main():
     # now replacement
     print('\nNOW REPLACEMENT\n')
     t.replacement(k=k)
-    # for i in t.inferences:
-    #     i.replacement(k=k)
+    for i in t.inferences:
+        i.replacement(k=k)
         # for j in i.inferences:
         #     j.replacement(k=k)
 
@@ -65,7 +65,8 @@ class Knowledge:
 
     def printK(self):
         for key in self.frags.keys():
-            print(self.frags[key])  # Fragment
+            frag = self.frags[key]
+            print(frag, frag.ccgtree.root.cat.semCat, frag.ccgtree.root.cat)  # Fragment
             print('\tsmall:', self.frags[key].small)
             print('\tbig:  ', self.frags[key].big)
             print()
@@ -133,7 +134,7 @@ class Knowledge:
         '''
         print('\n----------------\nbuilding knowledge...')
         self.buildPairs()
-        self.buildISA()
+        # self.buildISA()
         self.buildSubsecAdj()
         self.buildSelfDef()  # self defined relations
         print('\nknowledge built!\n--------------\n')
@@ -162,7 +163,7 @@ class Knowledge:
                     print('cannot handle syntactic type in pairs:', syntacticType)
                     sys.exit(1)
 
-                relationPair = line[2:].split('<')  # [' dog ', ' animal ']
+                relationPair = line.split(':')[1].split('<')  # [' dog ', ' animal ']
                 try:
                     assert len(relationPair) == 2
                 except AssertionError:
@@ -204,6 +205,7 @@ class Knowledge:
         # read in all subsec adjs
         with open('./k/subsecAdj.txt') as f:
             for line in f:
+                if line.startswith('#'): continue
                 adj = getMono.LeafNode(depth=0,
                                        cat=getMono.Cat(originalType=r'N/N',
                                                        word=line.strip()),
@@ -252,8 +254,10 @@ class Knowledge:
         print('\ntrees read in from sentences4k.candc.xml!\n')
 
         for idx, t in knowledgetrees.trees.items():
-            t.fixTree()
-            t.getPM()
+            t.fixMost()
+            t.fixNot()
+            t.fixRC()
+            t.mark()
             t.polarize()
 
             print('isA relation:', end=' ')
@@ -301,8 +305,8 @@ class Knowledge:
                 some.sisters = [predCopy]; predCopy.sisters = [some]
 
                 # make them +
-                everyDogNode.cat.semCat.pm = '+'
-                someDogNode.cat.semCat.pm = '+'
+                everyDogNode.cat.semCat.marking = '+'
+                someDogNode.cat.semCat.marking = '+'
                 # print('everyDogNode:', everyDogNode)
                 # print('someDogNode:', someDogNode)
 
@@ -320,7 +324,7 @@ class Knowledge:
 
     def buildSelfDef(self):
         '''
-        self-defined < relations
+        self-defined < relations: every < some
         '''
         every = getMono.LeafNode(depth=0, cat=getMono.Cat('NP/N', word='every'),
                                  chunk=None, entity=None,

@@ -16,6 +16,12 @@ if [ "$#" -le 1 ]; then
     exit 1
 fi
 
+if [ $2 != "candc" ] && [ $2 != "easyccg" ]; then
+    printf "\nUsage: ./parse.sh sentences.txt parser (outputDir)\n
+      parser: candc, easyccg (if using easyccg, outputFormat is 'extended')
+      parser only has 2 options\n\n"
+    exit 1
+fi
 # -------------------------------------------------
 # set the paths to CandC parser, easyccg parser and ccg2lambda
 candc="../candc-1.00"
@@ -34,12 +40,13 @@ fi
 
 # INname, OUTname
 INname=$(basename "$1" .txt) # basename of input file
-OUTname="tmp"
+# OUTname="tmp"
 
 # for knowledge or sentences4k.txt
-if [ $INname = "knowledge" ] || [ $INname = "sentences4k" ]; then
-    OUTname=$INname
-fi
+# if [ $INname = "knowledge" ] || [ $INname = "sentences4k" ]; then
+#     OUTname=$INname
+# fi
+OUTname=$INname
 
 # parse
 if [ $2 == "candc" ]; then
@@ -57,7 +64,7 @@ if [ $2 == "candc" ]; then
     --output ${outputDir}/${OUTname}.candc.parsed.xml --log mylog
 
     # convert to transccg
-    ./mytree2transccg.py candc > ${outputDir}/${OUTname}.candc2transccg.xml > \
+    ./mytree2transccg.py "${outputDir}/${OUTname}.candc.parsed.xml" candc > ${outputDir}/${OUTname}.candc2transccg.xml > \
     ${outputDir}/${OUTname}.candc2transccg.xml
 
     # to html
@@ -93,7 +100,7 @@ else
     sed -i -e 's/(</{</g; s/>)/>}/g; s/ )/ }/g' "${outputDir}/${OUTname}.easyccg.parsed.txt"
 
     # convert to transccg
-    ./mytree2transccg.py easyccg > ${outputDir}/${OUTname}.easyccg2transccg.xml
+    ./mytree2transccg.py "${outputDir}/${OUTname}.easyccg.parsed.txt" easyccg > ${outputDir}/${OUTname}.easyccg2transccg.xml
 
     # convert to pretty html
     ${ccg2lambdaDir}/scripts/visualize.py \
