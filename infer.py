@@ -12,11 +12,15 @@ import sys, re, os, copy
 
 def main():
     sentToTest = None
+    if '-t' in sys.argv:
+        test()
+        return
     if len(sys.argv) >= 2:
         sentToTest = int(sys.argv[1]) # sentence to test
         print('sentToTest:',sentToTest)
     trees = getMono.CCGtrees()
-    trees.readCandCxml('test_fracas.candc.parsed.xml')  # ('tmp.candc.xml')
+    # trees.readCandCxml('test_fracas.candc.parsed.xml')  # ('tmp.candc.xml')
+    trees.readEasyccgStr('test_fracas.easyccg.parsed.txt')
 
     # build knowledge
     # k = buildKnowledgeTest() # April 26
@@ -24,9 +28,7 @@ def main():
     k.buildAll()
     k.printK()
 
-    # return
-
-    # TODO read in sent, do replacement
+    # read in sent, do replacement
 
     print()
     print('-' * 20)
@@ -55,9 +57,36 @@ def main():
     t.printAllInferences()
     # getInferOld(t, conc='No historian catwalks .')
 
+def test():
+    trees = getMono.CCGtrees()
+    # trees.readEasyccgStr('test_fracas.easyccg.parsed.txt')
+    trees.readEasyccgStr('fracas.easyccg.parsed.txt')
+
+    # build knowledge
+    k = Knowledge()  # JUNE 12
+    # k.buildAll()
+    # k.printK()
+
+    for t_idx, t in trees.trees.items():
+        # t = trees.trees[1]
+        # print()
+        k.updateSent(t)
+
+    k.printK()
+
+    k.update()
+
+
+class SentenceBase:
+    def __init__(self):
+        self.inferences = []
+        self.H = None
+    def update(self):
+        pass
+
 class Knowledge:
     def __init__(self):
-        # frags: {string : Fragment}
+        # frags: {string : Fragment} where we have Fragment.small and Fragment.big
         self.frags = {}  # TODO should we call them preorders?
         self.numPairs = 0
         self.allnouns = {}   # a dict of wordAsStr(upper) : LeafNode; ONLY 'N' here, no 'NP'
@@ -108,6 +137,68 @@ class Knowledge:
                 self.frags[big.wholeStr].small.append(Fragment(small))
 
         self.numPairs += 1
+
+    def updateSent(self, sent_ccgtree):
+        """ update K after reading in a sent (premise) """
+        # print(sent_ccgtree.wholeStr)
+        # print(sent_ccgtree.words)
+
+        if sent_ccgtree.wholeStr.startswith('EVERY'):
+            # -----------------------------------
+            # if sentence: "every X is NP", then add X < NP
+            # TODO what if 2 IS in sentence?
+            if "IS" in sent_ccgtree.words:
+                # idx_is, idx_every = sent_ccgtree.words.index("IS"), 0
+                N = None
+                # go to the node "is"
+                for lNode in sent_ccgtree.leafNodes:
+                    if lNode.word == "is":
+                        NP = lNode.sisters[0]  # find NP
+                        if NP.children[0].word in {"a", "an"}:
+                            N = NP.children[1]
+                    if lNode.word.upper() == "EVERY":
+                        X = lNode.sisters[0]   # find X
+
+                # if (idx_is > -1) and (idx_every > -1):
+                if N:
+                    print("adding to K: ", X.wholeStr, "<", N.wholeStr)
+                    self.addPair((
+                        (getMono.CCGtree(NonTermNode=X),(getMono.CCGtree(NonTermNode=N)))
+                    ))
+                # DONE!
+
+            # -----------------------------------
+            # if sentence: "every X VP", then add X < VP
+            else:
+                # find the VP, or just the predicate.
+                # TODO this applies to every sentence starting with 'every'
+                for lNode in sent_ccgtree.leafNodes:
+                    if lNode.word.upper() == "EVERY":
+                        X = lNode.sisters[0]   # find X
+                        VP = lNode.parent.sisters[0]
+                        print("adding to K: ", X.wholeStr, "<", VP.wholeStr)
+                        self.addPair((
+                            (getMono.CCGtree(NonTermNode=X), (getMono.CCGtree(NonTermNode=VP)))
+                        ))
+
+    def update(self):
+        """ update K based on the K-updating rules """
+        # ---------------------------------------
+        # rule 1: if N < VP and N < N_1, then N < N_1 who VP
+        for frag in self.frags.values():
+            print('\nfrag: ', frag)
+            Ns, VPs = [], []
+            for big in frag.big:  # big is an object of Fragment
+                # find VP and N
+                if big.ccgtree.root.cat.typeWOfeats == r"S\NP":
+                    print("VP:", big)
+                if big.ccgtree.root.cat.typeWOfeats == r"N":
+                    print("N:", big)
+
+            # add N < N_1 who VP TODO
+            if Ns and VPs:  # if both not empty
+                pass
+        pass
 
     def buildAll(self):
 

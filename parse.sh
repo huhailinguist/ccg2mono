@@ -57,14 +57,18 @@ if [ $2 == "candc" ]; then
     printf "tokenizing...\n"
     cat $1 | sed -f ${ccg2lambdaDir}/en/tokenizer.sed > ${OUTname}.tok
 
+    # clean: at most n -> no
+    ./preprocess.py ${OUTname}.tok
+
     # parse:
     printf "parsing...\n"
     ${candcBinDir}/candc --models ${candcModelsDir} \
-    --candc-printer xml --input ${OUTname}.tok \
+    --candc-printer xml --input ${OUTname}.tok.clean \
     --output ${outputDir}/${OUTname}.candc.parsed.xml --log mylog
 
     # convert to transccg
-    ./mytree2transccg.py "${outputDir}/${OUTname}.candc.parsed.xml" candc > ${outputDir}/${OUTname}.candc2transccg.xml > \
+    ./mytree2transccg.py "${outputDir}/${OUTname}.candc.parsed.xml" candc ${OUTname}.tok.preprocess.log \
+    > ${outputDir}/${OUTname}.candc2transccg.xml > \
     ${outputDir}/${OUTname}.candc2transccg.xml
 
     # to html
@@ -83,8 +87,11 @@ else
     cat $1 | ./${ccg2lambdaDir}/en/tokenizer.sed | \
     perl -pe 's/ \n/\n/g; s/ \.//g; s/ ,//g' > ${OUTname}.tok
 
+    # clean: at most n -> no
+    ./preprocess.py ${OUTname}.tok
+
     # get pos and ner using candc: (copied from easyccg README)
-    cat ${OUTname}.tok | $candc/bin/pos --model $candc/models/pos | \
+    cat ${OUTname}.tok.clean | $candc/bin/pos --model $candc/models/pos | \
     $candc/bin/ner -model $candc/models/ner -ofmt "%w|%p|%n \n" > \
     "${outputDir}/${OUTname}.candc.pos.ner"
 
@@ -100,7 +107,8 @@ else
     sed -i -e 's/(</{</g; s/>)/>}/g; s/ )/ }/g' "${outputDir}/${OUTname}.easyccg.parsed.txt"
 
     # convert to transccg
-    ./mytree2transccg.py "${outputDir}/${OUTname}.easyccg.parsed.txt" easyccg > ${outputDir}/${OUTname}.easyccg2transccg.xml
+    ./mytree2transccg.py "${outputDir}/${OUTname}.easyccg.parsed.txt" easyccg  ${OUTname}.tok.preprocess.log \
+    > ${outputDir}/${OUTname}.easyccg2transccg.xml
 
     # convert to pretty html
     ${ccg2lambdaDir}/scripts/visualize.py \

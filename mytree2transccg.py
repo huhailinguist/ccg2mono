@@ -30,16 +30,20 @@ str_span_root = '<span root="true" id="{}" child="{}" pos="None" ' \
 str_span_nonTerm = '<span id="{}" child="{}" pos="None" category="{}" ' \
                  'rule="{}" ETtype="{}" polarity="{}"/>'
 
-message = "\nUsage: ./mytree2transccg.py parser\n"
+message = "\nUsage: ./mytree2transccg.py filename parser filename_log\n" \
+          "e.g. filename=test.easyccg.parsed.txt,\n" \
+          "filename_log=test.tok.preprocess.log\n"
 
 def main():
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 4:
         eprint(message)
     else:
-        parser = sys.argv[1]
-        convert2transccg(parser)
+        filename = sys.argv[1]
+        parser = sys.argv[2]
+        filename_log = sys.argv[3]
+        convert2transccg(filename, parser, filename_log)
 
-def convert2transccg(parser):
+def convert2transccg(filename, parser, filename_log):
     """
     input: 
     - easyccg output (tmp.easyccg.parsed.txt) or 
@@ -51,12 +55,12 @@ def convert2transccg(parser):
 
     return # of sents not polarized
     """
-    trees = CCGtrees()
+    trees = CCGtrees(filename_log)
     
     if parser == 'easyccg':
-        trees.readEasyccgStr('tmp.easyccg.parsed.txt')
+        trees.readEasyccgStr(filename)  #('tmp.easyccg.parsed.txt')
     elif parser == 'candc':
-        trees.readCandCxml('tmp.candc.parsed.xml')
+        trees.readCandCxml(filename)  #('tmp.candc.parsed.xml')
     else:
         eprint('parser can only be: easyccg, candc')
         exit()
@@ -65,20 +69,29 @@ def convert2transccg(parser):
     # mark and polarize
     N_polar = 0
     N_unpolar = 0
-    for idx, t in trees.trees.items():
-        # t.mark_LeafNodes()
-        if parser == 'candc':  t.fixTree()  # only fix the tree if using candc
-        if parser == 'easyccg': t.fixMost()
+    # for idx, t in trees.trees.items():
+
+    idx_cant_polarize = {}
+    for idx in trees.tree_idxs:
+        # build the tree here
+        t = trees.build_one_tree(idx, parser)
+
+        # fix tree
+        t.fixQuantifier()
+        t.fixNot()
+        if parser == 'candc': t.fixRC()  # only fix RC for candc
 
         try:
             t.mark()
             t.polarize()
+            t.getImpSign()
             N_polar += 1
-        except (ErrorCCGtree, ErrorCompareSemCat) as e:
+        except (ErrorCompareSemCat, ErrorCCGtree, AssertionError, AttributeError) as e:
             eprint(e)
             eprint('-- cannot polarize sent: ', end='')
             N_unpolar += 1
         t.printSent(stream=sys.stderr)
+        eprint()
     # ----------------------------------
 
     print("""<?xml version='1.0' encoding='UTF-8'?>\n<root>\n<document>\n<sentences>""")
@@ -140,6 +153,8 @@ def traverse(node, leafCounter, idx):
     """ traverse the tree to print xml """
     ETtype = node.cat.semCat.__str__()
     polarity = getPolarityAsArrow(node)
+    if node.impSign:  # TODO need to fix this
+        polarity = polarity + " : " + node.impSign  # plus implicative sign
 
     if len(node.children) == 0:  # leaf
         terminal = "t"+str(idx)+'_'+str(leafCounter)
