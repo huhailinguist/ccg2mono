@@ -17,7 +17,7 @@ __email__ = "huhai@indiana.edu"
 
 import sys, os, re, copy, argparse
 from getMono import eprint
-from pass2act import P2A_transformer
+from pass2act import pass2act
 import spacy, utils
 # from stanfordcorenlp import StanfordCoreNLP
 
@@ -47,7 +47,8 @@ def preprocess(fn):
     fh_log.write("sentId,before,after,idx\n")
     fh_clean = open(fn + '.clean', 'w')
     s_pattern = "{},{},{},{}\n"
-    p2a = P2A_transformer(spacy.load('en'))
+    nlp = spacy.load('en')
+    # p2a = P2A_transformer(spacy.load('en'))
     # corenlp = StanfordCoreNLP('http://localhost', port=9000, lang='en')
     corenlp = None
 
@@ -63,7 +64,7 @@ def preprocess(fn):
             # line = line.lower()
 
             eprint('\nbefore :', line)
-            line = preprocess_line(line, fh_log, s_pattern, sent_id, p2a, corenlp)
+            line = preprocess_line(line, fh_log, s_pattern, sent_id, corenlp)
             eprint('after :', line)
 
             # write to clean file
@@ -74,7 +75,7 @@ def preprocess(fn):
     fh_clean.close()
     eprint('...done!\n')
 
-def preprocess_line(line, fh_log, s_pattern, sent_id, p2a, corenlp):
+def preprocess_line(line, fh_log, s_pattern, sent_id, corenlp):
     """ preprocess one line """
     line_lower = line.lower()
 
@@ -133,7 +134,7 @@ def preprocess_line(line, fh_log, s_pattern, sent_id, p2a, corenlp):
         if " by " not in line:
             line += " by a thing"
         line_old = line[:]
-        line = p2a.pass2act(line).strip('. ')
+        line = pass2act(line).strip('. ')
         if line == line_old and line.endswith(" by a thing"):
             line = line[:-11]  # remove by a thing if still not activized
 

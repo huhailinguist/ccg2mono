@@ -16,7 +16,7 @@ if [ "$#" -le 1 ]; then
     exit 1
 fi
 
-if [ $2 != "candc" ] && [ $2 != "easyccg" ]; then
+if [ $2 != "candc" ] && [ $2 != "easyccg" ] && [ $2 != "depccg" ]; then
     printf "\nUsage: ./parse.sh sentences.txt parser (outputDir)\n
       parser: candc, easyccg (if using easyccg, outputFormat is 'extended')
       parser only has 2 options\n\n"
@@ -76,7 +76,7 @@ if [ $2 == "candc" ]; then
     ${outputDir}/${OUTname}.candc2transccg.xml > \
     "${outputDir}/${OUTname}.candc_pretty.html"
 
-else
+elif [ $2 == "easyccg"]; then
     ################  easyccg parser  ################
     printf "*** parsing using easyccg ***\n"
 
@@ -115,6 +115,30 @@ else
     ${outputDir}/${OUTname}.easyccg2transccg.xml > \
     ${outputDir}/${OUTname}.easyccg_pretty.html
 
+elif [ $2 == "depccg" ]; then
+	printf "***parsing using depccg, with candc output***\n"
+
+    # tokenize:
+    printf "tokenizing...\n"
+    cat $1 | sed -f ${ccg2lambdaDir}/en/tokenizer.sed > ${OUTname}.tok
+
+    # clean: at most n -> no
+    ./preprocess.py ${OUTname}.tok
+
+    # parse:
+    printf "parsing...\n"
+    depccg_en \
+    --format xml --input ${OUTname}.tok.clean > ${outputDir}/${OUTname}.candc.parsed.xml
+
+    # convert to transccg
+    ./mytree2transccg.py "${outputDir}/${OUTname}.candc.parsed.xml" candc ${OUTname}.tok.preprocess.log \
+    > ${outputDir}/${OUTname}.candc2transccg.xml > \
+    ${outputDir}/${OUTname}.candc2transccg.xml
+
+    # to html
+    python3 ${ccg2lambdaDir}/scripts/visualize.py \
+    ${outputDir}/${OUTname}.candc2transccg.xml > \
+    "${outputDir}/${OUTname}.candc_pretty.html"
 fi
 
 printf "Done!\n"
