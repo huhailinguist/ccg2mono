@@ -76,7 +76,7 @@ if [ $2 == "candc" ]; then
     ${outputDir}/${OUTname}.candc2transccg.xml > \
     "${outputDir}/${OUTname}.candc_pretty.html"
 
-elif [ $2 == "easyccg"]; then
+elif [ $2 == "easyccg" ]; then
     ################  easyccg parser  ################
     printf "*** parsing using easyccg ***\n"
 
@@ -128,7 +128,7 @@ elif [ $2 == "depccg" ]; then
     # parse:
     printf "parsing...\n"
     depccg_en \
-    --format xml --input ${OUTname}.tok.clean > ${outputDir}/${OUTname}.candc.parsed.xml
+    --format xml --input ${OUTname}.tok.clean --annotator spacy > ${outputDir}/${OUTname}.candc.parsed.xml
 
     # convert to transccg
     ./mytree2transccg.py "${outputDir}/${OUTname}.candc.parsed.xml" candc ${OUTname}.tok.preprocess.log \

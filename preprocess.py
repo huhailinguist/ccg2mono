@@ -18,7 +18,7 @@ __email__ = "huhai@indiana.edu"
 import sys, os, re, copy, argparse
 from getMono import eprint
 from pass2act import pass2act
-import spacy, utils
+import spacy
 # from stanfordcorenlp import StanfordCoreNLP
 
 pat = { 'most' : re.compile("[Aa]t most \d+"),
