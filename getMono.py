@@ -22,6 +22,7 @@ from sys import exit
 from bs4 import BeautifulSoup
 # from IPython.display import Markdown, display
 
+# TODO: standardize 'UP' and 'DOWN' instead of using those strings throughout
 # uparrow: U+2191, down arrow: U+2193
 
 __author__ = "Hai Hu; Larry Moss"
