@@ -17,7 +17,7 @@ __email__ = "huhai@indiana.edu"
 
 import sys, os, re, copy, argparse
 from getMono import eprint
-from pass2act import pass2act
+import pass2act
 import spacy
 # from stanfordcorenlp import StanfordCoreNLP
 
@@ -134,7 +134,7 @@ def preprocess_line(line, fh_log, s_pattern, sent_id, corenlp):
         if " by " not in line:
             line += " by a thing"
         line_old = line[:]
-        line = pass2act(line).strip('. ')
+        line = pass2act.pass2act(line).strip('. ')
         if line == line_old and line.endswith(" by a thing"):
             line = line[:-11]  # remove by a thing if still not activized
 
