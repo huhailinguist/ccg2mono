@@ -56,7 +56,9 @@ IMP_np = {"explain","guess","hesitate","mean","predict",
 # neutral: want to, from Nairn 2006
 IMP_px_nx = {"want"}
 
-QUANTIFIERS_TO_FIX = {'MOST', 'MANY', 'FEW', 'SEVERAL', 'ONE', '2', '3', '4', '5'}
+# QUANTIFIERS_TO_FIX = {'MOST', 'MANY', 'FEW', 'SEVERAL', 'ONE', '2', '3', '4', '5'}
+# NOTE (SS-T): taking 'many' out because so many occurrences of 'so many'
+QUANTIFIERS_TO_FIX = {'MOST', 'FEW', 'SEVERAL', 'ONE', '2', '3', '4', '5'}
 
 # TODO for all semCat, make everything + except NP, N, PP, PR, S
 EXCLUDE = {"((e,t),t)", "(e,t)", "t", "pp", "pr"}
@@ -1047,12 +1049,15 @@ class CCGtree:
         for token in self.leafNodes:
             # -----------------------
             # quantifiers   TODO what if not of type NP/N
-            if token.word.upper() in {'SOME', 'A', 'AN', 'SEVERAL','ONE','2','3','4','5'}:  # + +
+            if token.word.upper() in {'SOME', 'A', 'AN', 'MANY', 'SEVERAL','ONE','2','3','4','5'}:  # + +
+                # TODO (SST): MANY actually here?
                 # if token.cat.semCat.semCatStr == '((e,t),((e,t),t))':
                 try:
                     token.cat.semCat.marking = '+'
                     token.cat.semCat.OUT.marking = '+'
-                except AttributeError: pass
+                except AttributeError:
+                    eprint('Attribute error')
+                    pass
             elif token.word.upper() in {'EVERY', 'ALL', 'EACH'}:  # - +
                 # if token.cat.semCat.semCatStr == '((e,t),((e,t),t))':
                 token.cat.semCat.marking = '-'
@@ -1061,7 +1066,9 @@ class CCGtree:
                 # if token.cat.semCat.semCatStr == '((e,t),((e,t),t))':
                 token.cat.semCat.marking = '-'
                 token.cat.semCat.OUT.marking = '-'
-            elif token.word.upper() in {'BOTH', 'EITHER', 'MANY', 'MOST', 'THE'}:
+            elif token.word.upper() in {'BOTH', 'EITHER', 'MOST', 'THE',
+                                        'THOSE', 'THESE'}:
+                # TODO: restore 'MANY' here???
                 token.cat.semCat.OUT.marking = '+'
             elif token.word.upper() in {'NEITHER'}:
                 token.cat.semCat.OUT.marking = '-'
@@ -1118,6 +1125,12 @@ class CCGtree:
                 token.cat.semCat.marking = '+'
                 token.cat.semCat.IN.marking = '+'
                 token.cat.semCat.IN.IN.marking = '+'
+
+            # TODO (SS-T): is this the right way of handling None?
+            elif token.word.upper() in {'NONE'}:
+                eprint('Labeling NONE')
+                token.cat.semCat.marking = "-"
+                token.cat.semCat.OUT.marking = '-'
             # TODO NNS, NN
             elif token.pos.upper().startswith("NN"):
                 token.cat.semCat.assignRecursive("+", EXCLUDE)
@@ -2988,7 +3001,7 @@ class Cat:
                 and (self.word.upper() in {'WHO', 'THAT', 'WHICH'}):
                 self.semCat = SemCat(**{'IN': IN, 'OUT': OUT, 'marking': '+'})
 
-        elif self.typeWOfeats.upper() in ['.', ',']:  # punctuation
+        elif self.typeWOfeats.upper() in ['.', ',', ';']:  # punctuation
             self.semCat = SemCat()
 
         elif self.typeWOfeats.upper() == 'PP': # TODO
