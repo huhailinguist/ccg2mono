@@ -7,7 +7,7 @@ strings followed by the polarity labels for those tokens. """
 polarity_to_labels = {
     '\u2191': 'UP',
     '\u2193': 'DOWN',
-    '=': 'NONE'
+    '=': 'NEUTRAL'
 }
 
 def main(args):
