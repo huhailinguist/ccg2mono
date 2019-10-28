@@ -24,11 +24,11 @@ if [ $2 != "candc" ] && [ $2 != "easyccg" ]; then
 fi
 # -------------------------------------------------
 # set the paths to CandC parser, easyccg parser and ccg2lambda
-candc="../candc-1.00"
-easyccg="../easyccg"
-candcBinDir="../candc-1.00/bin"
-candcModelsDir="../candc-1.00/models"
-ccg2lambdaDir="../ccg2lambda"
+candc="../../candc-1.00"
+easyccg="../../easyccg"
+candcBinDir="../../candc-1.00/bin"
+candcModelsDir="../../candc-1.00/models"
+ccg2lambdaDir="../../ccg2lambda"
 # -------------------------------------------------
 
 # outputDir
