@@ -3,9 +3,9 @@
 # 2. polarize
 # 3. visualize
 # install necessary packages to python3 by running in the command line:
-# 
+#
 # ```pip3 install lxml simplejson pyyaml```
-# 
+#
 # Then set the correct directory path on lines 21-25
 #
 # Hai Hu, Feb 2018
@@ -87,7 +87,7 @@ else
     cat $1 | ./${ccg2lambdaDir}/en/tokenizer.sed | \
     perl -pe 's/ \n/\n/g; s/ \.//g; s/ ,//g' > ${OUTname}.tok
 
-    # clean: at most n -> no
+    # clean: at most n -> no, output file: ${OUTname}.tok.clean
     ./preprocess.py ${OUTname}.tok
 
     # get pos and ner using candc: (copied from easyccg README)
@@ -95,13 +95,13 @@ else
     $candc/bin/ner -model $candc/models/ner -ofmt "%w|%p|%n \n" > \
     "${outputDir}/${OUTname}.candc.pos.ner"
 
-    # parse to text file: 
+    # parse to text file:
     cat "${outputDir}/${OUTname}.candc.pos.ner" | \
     java -jar $easyccg/easyccg.jar --model $easyccg/model_rebank -i POSandNERtagged -o extended --unrestrictedRules > \
     "${outputDir}/${OUTname}.easyccg.parsed.txt"
 
     # parse to easyccg html, which is hard to see
-    # cat "${outputDir}/${OUTname}_candc.pos.ner" | java -jar $easyccg/easyccg.jar --model $easyccg/model_rebank -i POSandNERtagged -o html --unrestrictedRules > "${outputDir}/${OUTname}_easyccg.html"
+    # cat "${outputDir}/${OUTname}.candc.pos.ner" | java -jar $easyccg/easyccg.jar --model $easyccg/model_rebank -i POSandNERtagged -o html --unrestrictedRules > "${outputDir}/${OUTname}_easyccg.html"
 
     # change ( ) to {} so we can easily find nodes from easyccg output; IMPORTANT!
     sed -i -e 's/(</{</g; s/>)/>}/g; s/ )/ }/g' "${outputDir}/${OUTname}.easyccg.parsed.txt"

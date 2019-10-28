@@ -55,13 +55,17 @@ IMP_np = {"explain","guess","hesitate","mean","predict",
 # neutral: want to, from Nairn 2006
 IMP_px_nx = {"want"}
 
-QUANTIFIERS_TO_FIX = {'MOST', 'MANY', 'FEW', 'SEVERAL', 'ONE', '2', '3', '4', '5'}
+QUANTIFIERS_TO_FIX = {
+    'MOST', 'MANY', 'FEW', 'SEVERAL', 'SOME-BUT-NOT-ALL',
+    'ONE', '2', '3', '4', '5', '6', '7', '8', '9', '10'
+}
 
 # TODO for all semCat, make everything + except NP, N, PP, PR, S
 EXCLUDE = {"((e,t),t)", "(e,t)", "t", "pp", "pr"}
 
 # downward entailing prepositions
-DE_PREP = {'OUTSIDE', 'WITHOUT', 'OUT', 'EXCEPT'}
+# DE_PREP = {'OUTSIDE', 'WITHOUT', 'OUT', 'EXCEPT'}
+DE_PREP = {'WITHOUT'}  # except seems to be =
 
 RC_PRON = {'WHO', 'WHICH', 'THAT'}
 
@@ -272,12 +276,13 @@ class CCGtrees:
             for line in f:
                 if line.startswith('sentId'): continue
                 line_l = line.split(',')
-                sentId, before, after, idx = int(line_l[0]), line_l[1], line_l[2], int(line_l[3])
+                sentId, before, after, idx, len_sent = int(line_l[0]), line_l[1], line_l[2],\
+                                                       int(line_l[3]), int(line_l[4])
                 # may have multiple changes per sentence
                 if sentId in self.changes:
-                    self.changes[sentId].append({'before':before, 'after':after, 'idx':idx})
+                    self.changes[sentId].append({'before':before, 'after':after, 'idx':idx, 'len_sent':len_sent})
                 else:
-                    self.changes[sentId] = [ {'before':before, 'after':after, 'idx':idx} ]
+                    self.changes[sentId] = [ {'before':before, 'after':after, 'idx':idx, 'len_sent':len_sent} ]
         eprint("reading log file done!\n")
 
     def idx2change(self, idx):
@@ -309,21 +314,28 @@ class CCGtrees:
         eprint('\ntrees read in from candc output!\n\n')
 
     def readEasyccgStr(self, easyccg_fn, treeIdxs=None):  # treeIdx starts at 0
-        eprint('reading trees from easyccg output')
+        eprint('reading trees from easyccg output ...')
         easyccg_str = open(easyccg_fn).readlines()
 
         # for each tree
         counterSent = -1
+        tree_id = 1
         for tree_str in easyccg_str:
-            if tree_str.startswith('ID='): continue
-            counterSent += 1
+            if tree_str.startswith('ID='):
+                tree_id = int(tree_str.strip()[3:]) - 1  # get ID
+                continue
+            # counterSent += 1
             if treeIdxs:
-                if counterSent not in treeIdxs: continue
+                # if counterSent not in treeIdxs: continue
+                if tree_id not in treeIdxs: continue
             # if counterSent == 1: break
             #### build the tree  ####
             # eprint('reading tree {}...'.format(counterSent))
-            self.easyccg_str[counterSent] = tree_str
-            self.tree_idxs.append(counterSent)
+            if tree_str == "\n":  # easyccg failed to parse this sentence
+                eprint("- easyccg failed to parse sent {}".format(counterSent))
+                tree_str = "failed_to_parse"
+            self.easyccg_str[tree_id] = tree_str
+            self.tree_idxs.append(tree_id)
             # if counterSent in self.changes:
             #     tree = CCGtree(easyccg_tree_str=tree_str, changes=self.changes[counterSent])
             # else:
@@ -338,7 +350,14 @@ class CCGtrees:
         if parser == 'candc':
             t = CCGtree(ccgXml=self.CandC_xml[idx], changes=self.idx2change(idx))
         else:
-            t = CCGtree(easyccg_tree_str=self.easyccg_str[idx], changes=self.idx2change(idx))
+            tree_str = self.easyccg_str.get(idx, None)
+            if tree_str is None:
+                self.trees[idx] = "parse_exception"
+                return "parse_exception"
+            elif tree_str == "failed_to_parse":
+                self.trees[idx] = "failed_to_parse"
+                return tree_str
+            t = CCGtree(easyccg_tree_str=tree_str, changes=self.idx2change(idx))
         t.use_lemma = use_lemma
         self.trees[idx] = t
         return t
@@ -368,9 +387,11 @@ class CCGtree:
         # all the inferences we can get by using one replacement in a list
         # self.inferences = []  # a list of *first_order* CCGtrees, should have no repetition
 
-        self.numInfTotal = 0  # total num of inferences recursively
+        self.numInfTotal = 0    # total num of inferences recursively
 
-        self.inf_depth = 0    # depth of inference: how many replacements to get here
+        self.inf_depth = 0      # depth of inference: how many replacements to get here
+
+        self.neutral_depth = 0  # depth of neutral: how many replacements to get here
 
         # a list of tuples (y1, y2), storing the two types in a 'tr' rule that should
         # be the same, i.e. the two y's in:
@@ -445,12 +466,32 @@ class CCGtree:
                 self.getWholeStrAllNodesHelper(child)
             node.wholeStr = ' '.join([x.wholeStr for x in node.children]).rstrip()
 
+    def tree_str(self, lemma=True, arrow=True):
+        """ return the sentence as string """
+        s = ''
+        for lfnode in self.leafNodes:
+            if not arrow:
+                if lemma: s += '{} '.format(lfnode.word)
+                else: s += '{} '.format(lfnode.word_raw)
+            else:
+                if lfnode.cat.monotonicity is not None:
+                    if lemma: s += '{}{} '.format(lfnode.word, lfnode.cat.monotonicity)
+                    else: s += '{}{} '.format(lfnode.word_raw, lfnode.cat.monotonicity)
+                else:
+                    if lemma: s += '{}{} '.format(lfnode.word, '=')
+                    else: s += '{}{} '.format(lfnode.word_raw, '=')
+        if arrow:
+            s = s.replace('DOWN', '\u2193').replace('UP', '\u2191').replace('UNK', '=')
+        return s
+
     def printSent(self, stream=sys.stdout):
         """ print sent lemma by lemma """
         s = ''
         for lfnode in self.leafNodes:
             # s+='{}{}{} '.format(lfnode.word, lfnode.cat.monotonicity, self.printImpSign(lfnode.impSign))
-            s += '{}{} '.format(lfnode.word, lfnode.cat.monotonicity)
+            if lfnode.cat.monotonicity is not None:
+                s += '{}{} '.format(lfnode.word, lfnode.cat.monotonicity)
+            else: s += '{}{} '.format(lfnode.word, '=')
         s = s.replace('DOWN', '\u2193').replace('UP', '\u2191').replace('UNK', '=')
         print(s, file=stream)
         return s
@@ -460,7 +501,7 @@ class CCGtree:
         s = ''
         for lfnode in self.leafNodes:
             s += '{} '.format(lfnode.word)
-        eprint(s)
+        # eprint(s, stream)
         return s
 
     def printSent_raw(self, stream=sys.stdout):
@@ -532,13 +573,15 @@ class CCGtree:
     #         self.printAllInferencesHelper(inf, level+1)
 
     def replacement(self, k, gen_inf):
-        '''  replacement for inference; k is knowledge  '''
+        '''  replacement for inference; k is knowledge
+        gen_inf is a bool
+        '''
         # nodes2repwith is a list. there might be multiple things to replace in each run.
         # e.g. beagle < [dog, animal]
         inferences = []
         nodes2repwith = []  # nodes to replace with
-        neutrals = []
-        nodes2repwith_neu = []   # neutral
+        # neutrals = []
+        # nodes2repwith_neu = []   # neutral
         contras = []
         nodes2repwith_con = []   # contradiction
 
@@ -590,27 +633,14 @@ class CCGtree:
                         if small.ccgtree.root.cat.typeWOfeats == node_type:
                             nodes2repwith.append(small)
 
-                # --------------  neutrals  ---------------- #
-                if gen_inf:
-                    if (node.cat.monotonicity == 'UP') and (len(k.frags[node.wholeStr].small) != 0):
-                        # replace with smaller sets
-                        for small in k.frags[node.wholeStr].small:  # small is Fragment
-                            if small.ccgtree.root.cat.typeWOfeats == node_type:
-                                nodes2repwith_neu.append(small)
-
-                    elif (node.cat.monotonicity == 'DOWN') and (len(k.frags[node.wholeStr].big) != 0):
-                        # replace with bigger sets
-                        for big in k.frags[node.wholeStr].big:  # big is Fragment
-                            if big.ccgtree.root.cat.typeWOfeats == node_type:
-                                nodes2repwith_neu.append(big)
+                # --------------  contras  ---------------- #
+                if node.cat.monotonicity == "UP":  # only do this in UP!
+                    for ant in k.frags[node.wholeStr].ant:  # todo: replace w/ ant results in contra?
+                        if ant.ccgtree.root.cat.typeWOfeats == node_type:
+                            nodes2repwith_con.append(ant)
 
                 # --------------  contras  ---------------- #
-                for ant in k.frags[node.wholeStr].ant:  # todo: replace w/ ant results in contra?
-                    if ant.ccgtree.root.cat.typeWOfeats == node_type:
-                        nodes2repwith_con.append(ant)
-
-                # --------------  contras  ---------------- #
-                # alternations
+                # alternations todo: not implemented??
                 if node.cat.monotonicity == 'UP':
                     # TODO
                     if len(k.frags[node.wholeStr].alter) != 0:
@@ -623,28 +653,73 @@ class CCGtree:
                 if nodes2repwith:
                     inferences.extend(self.replacement_helper(node, nodes2repwith, ind, i, at_least=False))
 
-                if nodes2repwith_neu:
-                    neutrals.extend(self.replacement_helper(node, nodes2repwith_neu, ind, i, at_least=False))
-
                 if nodes2repwith_con:
                     contras.extend(self.replacement_helper(node, nodes2repwith_con, ind, i, at_least=False))
 
                 nodes2repwith = []
-                nodes2repwith_neu = []
+                # nodes2repwith_neu = []
                 nodes2repwith_con = []
 
             # at-least N < some = a = an, N = 3, 5, several
-            elif node.wholeStr.startswith("AT-LEAST") and \
-                    len(node.wholeStr.split(' ')) == 2:
-                # [some, a, an]
-                nodes2repwith = [n for n in k.frags["AT-LEAST-N"].big]
-                i = node.parent.children.index(node)  # index of 'at-least-N' in parent
-                eprint("replacing at least N")
-                # do replacement, SAME AS ABOVE
-                inferences.extend(self.replacement_helper(node, nodes2repwith, ind, i, at_least=True))
-                nodes2repwith = []
+            # todo: ** when generating challenge dataset, we don't need this **
+            # elif node.wholeStr.startswith("AT-LEAST") and \
+            #         len(node.wholeStr.split(' ')) == 2:
+            #     # [some, a, an]
+            #     nodes2repwith = [n for n in k.frags["AT-LEAST-N"].big]
+            #     i = node.parent.children.index(node)  # index of 'at-least-N' in parent
+            #     eprint("replacing at least N")
+            #     # do replacement, SAME AS ABOVE
+            #     inferences.extend(self.replacement_helper(node, nodes2repwith, ind, i, at_least=True))
+            #     nodes2repwith = []
 
-        return inferences, neutrals, contras
+        return inferences, contras
+
+    def replacement_neutral(self, k):
+        """
+        generate neutral sentences
+        - Intuition: Just do the opposite of inference generation!
+        Always replace ``against the scale'' and
+        replace on the newly generated *neutrals*, not the inferences!
+        - Explanation:
+          original premise: every[up] dog[down] danced[up]
+          neutral 1: every animal danced
+          Based on neutral 1, we further generate neutrals:
+          every living thing danced
+          every animal waltzed
+        """
+        # todo!!
+        neutrals = []
+        nodes2repwith_neu = []   # neutral
+
+        for ind in range(len(self.allNodes)):
+            node = self.allNodes[ind]
+            node_type = node.cat.typeWOfeats
+            if node.wholeStr in k.frags.keys() and \
+                node_type == k.frags[node.wholeStr].ccgtree.root.cat.typeWOfeats:
+
+                # replacement for once only!!
+                # get index of node in node.parent.children
+                i = node.parent.children.index(node)
+
+                # --------------  neutrals  ---------------- #
+                if (node.cat.monotonicity == 'UP') and (len(k.frags[node.wholeStr].small) != 0):
+                    # replace with smaller sets
+                    for small in k.frags[node.wholeStr].small:  # small is Fragment
+                        if small.ccgtree.root.cat.typeWOfeats == node_type:
+                            nodes2repwith_neu.append(small)
+
+                elif (node.cat.monotonicity == 'DOWN') and (len(k.frags[node.wholeStr].big) != 0):
+                    # replace with bigger sets
+                    for big in k.frags[node.wholeStr].big:  # big is Fragment
+                        if big.ccgtree.root.cat.typeWOfeats == node_type:
+                            nodes2repwith_neu.append(big)
+
+                if nodes2repwith_neu:
+                    neutrals.extend(self.replacement_helper(node, nodes2repwith_neu, ind, i, at_least=False))
+
+                nodes2repwith_neu = []
+
+        return neutrals
 
     def replacement_helper(self, node, nodes2repwith, ind, i, at_least):
         ans = []  # inferences or neutrals
@@ -657,7 +732,7 @@ class CCGtree:
             # SET POS and CAT for newNode
             # !! newNode.pos, newNode.cat came from building the knowledge
             # could be incomplete
-            if not at_least:  # only check if not "at least"
+            if not at_least:  # only check the following criteria if not "at least"
                 try:
                     if newNode.pos is None:  # replace
                         newNode.pos, newNode.cat = node.pos, node.cat
@@ -712,7 +787,7 @@ class CCGtree:
         # if False, accuracy for contradiction will be 0!
         use_lemma = self.use_lemma  # default is True; False when only generate infs and contras
 
-        # rule 1
+        # TODO rule 1
         # first word: some --> no; no --> some
         if self.wholeStr.startswith("SOME"):
             contras.append("NO " + ' '.join(get_str(self.root, use_lemma).split()[1:]))
@@ -774,7 +849,7 @@ class CCGtree:
         #       (S\NP)/NP = myV           NP  =  myNP
         #      ----------------------------------
         # NP                S\NP  =  VP
-        #-----------------------
+        # -----------------------
         #            S
         if " NOT " not in self.wholeStr and " N'T " not in self.wholeStr:
             if len(self.root.children) == 2 and \
@@ -785,13 +860,14 @@ class CCGtree:
                         VP.children[0].cat.typeWOfeats == r"(S\NP)/NP":
                     # add "do not"
                     # contra_str = VP.sisters[0].wholeStr + " DO NOT " + VP.wholeStr
-                    contra_str = get_str(VP.sisters[0], use_lemma) + " DO NOT " + get_str(VP, use_lemma)
+                    contra_str = get_str(VP.sisters[0], use_lemma) + " DID NOT " + get_str(VP, use_lemma)
                     contras.append(contra_str)
                 # main ver = BE
-                elif len(VP.children) == 2 and VP.children[0].wholeStr == "BE":
+                elif len(VP.children) == 2 and VP.children[0].wholeStr in {"BE", "ARE", "IS", "WAS", "WERE"}:
                     # the person is slicing a garlic -> the person is not slicing ...
                     # contra_str = VP.sisters[0].wholeStr + " BE NOT " + VP.children[1].wholeStr
-                    contra_str = get_str(VP.sisters[0], use_lemma) + " BE NOT " + get_str(VP.children[1], use_lemma)
+                    # contra_str = get_str(VP.sisters[0], use_lemma) + " BE NOT " + get_str(VP.children[1], use_lemma)
+                    contra_str = " ".join([get_str(VP.sisters[0], use_lemma), VP.children[0].wholeStr, "NOT", get_str(VP.children[1], use_lemma)])
                     contras.append(contra_str)
 
         # sent: a man (is (recklessly climbing a rope))
@@ -799,7 +875,7 @@ class CCGtree:
         # TODO: recklessly climb a rope < climb a rope
 
 
-        # TODO rule 4: if not in sent, then remove not, what if two negations
+        # TODO rule 4: if not in sent, then remove not. what if two negations?
         if " NOT " in self.wholeStr:
             # contras.append(self.wholeStr.replace(" NOT", ""))
             contras.append(get_str(self.root, use_lemma).replace(" NOT", "").replace(" not", "").replace("Not", ""))
@@ -1046,7 +1122,9 @@ class CCGtree:
         for token in self.leafNodes:
             # -----------------------
             # quantifiers   TODO what if not of type NP/N
-            if token.word.upper() in {'SOME', 'A', 'AN', 'SEVERAL','ONE','2','3','4','5'}:  # + +
+            if token.word.upper() in {'SOME', 'A', 'AN', 'SEVERAL',
+                                      'ONE',
+                                      'SOME-BUT-NOT-ALL'}:  # + +
                 # if token.cat.semCat.semCatStr == '((e,t),((e,t),t))':
                 try:
                     token.cat.semCat.marking = '+'
@@ -1064,6 +1142,11 @@ class CCGtree:
                 token.cat.semCat.OUT.marking = '+'
             elif token.word.upper() in {'NEITHER'}:
                 token.cat.semCat.OUT.marking = '-'
+            elif token.word.upper() in {'2', '3', '4', '5', '6', '7', '8', '9', '10'}:
+                # = =
+                token.cat.semCat.marking = None
+                token.cat.semCat.OUT.marking = None
+
             # TODO other DTs: this, that?
 
             elif token.pos.upper() == "PRP$":  # pos
@@ -1072,18 +1155,24 @@ class CCGtree:
 
             # -----------------------
             # at-most, at-least
-            elif token.note == "at-most":
+            elif token.note in {"at-most", "less-than"}:
                 # (NP/N)/(N/N)
                 # ((et,et),+(et-,(et-,t)))
                 token.cat.semCat.marking = '+'
                 token.cat.semCat.OUT.marking = '-'
                 token.cat.semCat.OUT.OUT.marking = '-'
-            elif token.note == "at-least":
+            elif token.note in {"at-least", "more-than"}:
                 # (NP/N)/(N/N)
                 # ((et,et),-(et+,(et+,t)))
                 token.cat.semCat.marking = '-'
                 token.cat.semCat.OUT.marking = '+'
                 token.cat.semCat.OUT.OUT.marking = '+'
+            elif token.note == "exactly":
+                # (NP/N)/(N/N)
+                # ((et,et),(et,(et,t)))
+                token.cat.semCat.marking = None
+                token.cat.semCat.OUT.marking = None
+                token.cat.semCat.OUT.OUT.marking = None
 
             # -----------------------
             # TODO negation
@@ -1138,7 +1227,8 @@ class CCGtree:
             # that, who
             elif token.word.upper() in ['THAT', 'WHO', 'WHICH'] and \
                     (token.pos in ['WDT', 'IN', 'WP']):
-                # !! already handled in Cat() !! #
+                # !! already handled in Cat() !! modified #
+                token.cat.semCat.assignRecursive("+", EXCLUDE)
                 pass
 
             # TODO verbs
@@ -1425,7 +1515,7 @@ class CCGtree:
                     assert left.cat.semCat.IN.semCatStr == right.cat.semCat.semCatStr
                 except AssertionError:
                     eprint("Error in fa, likely due to fixQuantifier:")
-                    eprint(parent, ";  ", left, ";  ", right)
+                    eprint("parent: {}\nleft  : {}\nright : {}".format(parent, left, right))
                 parent.cat.semCat = left.cat.semCat.OUT  # assign marking
 
                 # TODO comparator
@@ -1684,8 +1774,12 @@ class CCGtree:
         [pay attention to +/- signs]
         """
 
-        try: assert semCat1.semCatStr == semCat2.semCatStr  # semCatStr does not have +/-
-        except AssertionError: raise ErrorCompareSemCat('parent is: {}'.format(parent))
+        try:
+            assert semCat1.semCatStr == semCat2.semCatStr  # semCatStr does not have +/-
+        except AssertionError:
+            eprint('semCat1.semCatStr: {}'.format(semCat1.semCatStr))
+            eprint('semCat2.semCatStr: {}'.format(semCat2.semCatStr))
+            raise ErrorCompareSemCat('parent is: {}'.format(parent))
 
         # eprint('---\nbefore:\nsemCat1:', semCat1, semCat1.semCatStr)
         # eprint('semCat2:', semCat2, semCat2.semCatStr)
@@ -1951,7 +2045,7 @@ class CCGtree:
                 self.polarizeHelper(left, monoDirection)
                 self.polarizeHelper(right, monoDirection)
             else:
-                raise ErrorCCGtree('unknown ruleType in polarize: '
+                raise ErrorCCGtree('unknown ruleType in polarize (two children): '
                                    '{}'.format(node.ruleType))
 
         elif len(node.children) == 1:  # 1 child
@@ -1967,7 +2061,7 @@ class CCGtree:
                                     self.calcMono(node.cat.semCat.IN.marking,
                                                   monoDirection))
             else:
-                eprint('unknown ruleType in polarize: {}'.format(node.ruleType))
+                eprint('unknown ruleType in polarize (one child): {}'.format(node.ruleType))
                 pass
 
     def calcMono(self, functorORmarking, monoDirection):
@@ -2143,7 +2237,10 @@ class CCGtree:
                 self.words.append(lf_node.word.upper())
 
                 # add lf_node to the last ntn_node in stack
-                ntn_node = stack[-1]
+                try:
+                    ntn_node = stack[-1]
+                except IndexError:  # when the sent is empty 
+                    return
                 lf_node.parent = ntn_node  # set parent pointer
                 if len(ntn_node.children) == 1:  # ntn_node already has a child, set sister
                     sister = ntn_node.children[0]
@@ -2210,7 +2307,8 @@ class CCGtree:
         # print('NTN:', numNTN)
 
         # there is one last node in stack, pop it and attach it to dummy root
-        assert len(stack) == 1
+        try: assert len(stack) == 1
+        except AssertionError: return 
         last_node = stack.pop(-1)
         self.root = last_node
         self.regetDepth()
@@ -2235,12 +2333,13 @@ class CCGtree:
         eprint(changes_onetree)
         changes = changes_onetree
 
+        change_cnt = 0
+
         for change in changes:
             # check whether it's `at most' or `at least' or `a-lot-of'
-            if change['after'].upper() == "NO":
-                self.recover_at_most_least("at-most", change)
-            elif change['after'].upper() == "SOME":
-                self.recover_at_most_least("at-least", change)
+            if change['after'] in {"no", "some", "some-exactly"}:
+                self.recover_at_most_least(change, change_cnt)
+                change_cnt += 1
             elif change['before'] == "a-lot-of":
                 self.recover_a_lot_of()  # TODO
             else:
@@ -2248,26 +2347,37 @@ class CCGtree:
                 self.printSent()
                 return
 
-    def recover_at_most_least(self, quant, changes):
-        """ recover 'at most' and 'at leat' """
-        idx = -1
-        counter = 0
+    def recover_at_most_least(self, change, change_cnt):
+        """ recover 'at most' and 'at leat', more than, less than """
+        # change is a dict
+        # {'before':at most 5, 'after':no, 'idx':0}
+        if change_cnt > 0:
+            # we have already recovered something,
+            # so len_sent increased the number of changes we recovered
+            # since one change results in one more leafNode
+            change['len_sent'] += change_cnt
+            change['idx'] += change_cnt
 
-        # step 1. how many 'no' are there in tree
-        for i, lnode in enumerate(self.leafNodes):
-            if lnode.word.upper() == changes['after'].upper():
-                idx = i
-                counter += 1
+        # step 1. Make sure len_sent is correct
+        try: assert len(self.leafNodes) == change['len_sent']
+        except AssertionError:
+            eprint(len(self.leafNodes))
+            eprint(change['len_sent'])
+            self.printSent_raw(sys.stderr)
+            eprint("something wrong in recovering at most/least")
+            exit()
 
-        if counter > 1:
-            eprint("cannot handle two 'at-most/least' changes in one sentence")
-            return
-        elif counter == 0:
-            eprint("something wrong in changes for sentence:")
-            self.printSent()
-            return
-        else:
-            node_old = self.leafNodes[idx]  # !!! replace this with `at most 5'
+        node_old = self.leafNodes[change["idx"]]  # !!! replace this with `at most 5'
+        try: assert node_old.word.lower() == change["after"].lower()
+        except AssertionError:
+            eprint("words don't match in recovering at most/least")
+            exit()
+
+        # quant = exaclty
+        if change["before"].startswith("exactly-"):
+            quant = "exactly"
+        else:  # quant = at-most or at-least
+            quant = "-".join(change["before"].split("-")[:2])
 
         # step 2. build 'at-most 5'
         #   at-most          5               let's say numbers are of type N/N
@@ -2281,9 +2391,8 @@ class CCGtree:
                                 lemma=quant, pos="DT", span=None, start=None,
                                 word=quant, impType=None, fixed=True,
                                 note=quant)
-        # quant = at-most or at-least
 
-        num_str = changes['before'].split()[-1]
+        num_str = change['before'].split("-")[-1]
         node_num = LeafNode(depth=0, cat=Cat(originalType="N/N",
                                                     word=num_str),
                                 chunk=None, entity=None,
@@ -2376,7 +2485,10 @@ class CCGtree:
         """ fix the cat of some quantifiers and the tree structure
         return False if there are no more quantifiers to fix
         - QUANTIFIERS_TO_FIX:
-        'MOST', 'MANY', 'FEW', 'SEVERAL', 'ONE'
+        'MOST', 'MANY', 'FEW', 'SEVERAL', 'ONE', 2, 3, 4, 5
+
+        return True: needs to check other quantifiers
+        return False: every quantifier fixed!
         """
         # first identify the quantifier to fix
         quant = None
@@ -2390,25 +2502,25 @@ class CCGtree:
                     break
         if quant is None: return False  # everything fixed!!
 
-        # check if it's ``at most''
+        # here we only want to fix "most" as in "most people are ..."
+        # so we want to make sure that we are
+        # NOT getting "at most N"
         nodeMost = None
         nodeMostID = None
         for i in range(len(self.leafNodes)):
-            if i == 0:
-                if self.leafNodes[i].word.upper() == quant and \
-                        self.leafNodes[i].cat.typeWOfeats == r"N/N":
+            if self.leafNodes[i].word.upper() == quant and \
+                    self.leafNodes[i].cat.typeWOfeats == r"N/N":
+                if i == 0:  # first word in sent
                     nodeMost = self.leafNodes[i]
                     nodeMostID = 0
-            else:
-                if self.leafNodes[i].word.upper() == quant and \
-                        self.leafNodes[i].cat.typeWOfeats == r"N/N":
-                    # make sure the word before it is not 'AT', 'A', at most, a few
-                    if self.leafNodes[i-1].word.upper() in {'AT', 'A', 'LEAST'}:
+                else:  # not first word
+                    # make sure we are not fixing:
+                    # at most, a few, exaclty 2
+                    if self.leafNodes[i-1].word.upper() in {'AT', 'A', 'LEAST', 'EXACTLY'}:
                         self.leafNodes[i].fixed = True
-                    else :  # it's not at most, a few; needs fixing
+                    else:  # it's not at most, a few; needs fixing
                         nodeMost = self.leafNodes[i]
                         nodeMostID = i
-                else: continue
 
         # the following works when there is no RC: most people are ...
         flag_RC = False
@@ -2506,7 +2618,7 @@ class CCGtree:
                 if node_NP.cat.typeWOfeats != 'NP':
                     eprint('something wrong fixing most + N + RC; cannot fix it')
                     nodeMost.fixed = True
-                    return True
+                    return False 
 
                 # combine node_N and node_1
                 node_2 = NonTermNode(depth=0, cat=Cat('N'), ruleType='ba')
@@ -2756,7 +2868,7 @@ class CCGtree:
             return (None, None)
 
 class LeafNode:
-    def __init__(self,depth,cat,chunk,entity,lemma,pos,span,start,word,impType=None,fixed=False,note=None):
+    def __init__(self,depth,cat,chunk,entity,lemma,pos,span,start,word,impType=None,fixed=False,note=None,number=None):
         self.parent = None; self.children = []; self.sisters = []
         self.depth = depth
 
@@ -2777,6 +2889,11 @@ class LeafNode:
         self.impSign = None  # sign of implicative
         self.fixed = fixed   # when it's quantifier (most, many), whether it has been fixed
         self.note = note     # note: "at-most", "at-least", "at-most-N", "at-least-N"
+        self.number = number  # sg = singular, pl = plural
+    def assign_new_word(self, word, number):
+        self.word = self.lemma = self.word_raw = word
+        self.wholeStr = self.lemma.upper()
+        self.number = number
     def copy(self):
         cat = copy.deepcopy(self.cat) # recursively create new copy
         return LeafNode(self.depth,cat,self.chunk,self.entity,self.lemma,
@@ -2792,7 +2909,7 @@ class LeafNode:
         return self.__str__()
 
 class NonTermNode:
-    def __init__(self,depth=None,cat=None,ruleType=None,wholeStr='',impType=None,note=None):
+    def __init__(self,depth=None,cat=None,ruleType=None,wholeStr='',impType=None,note=None,number=None):
         self.parent = None; self.children = []; self.sisters = []
         self.depth = depth
         self.cat = cat; self.ruleType = ruleType
@@ -2802,7 +2919,8 @@ class NonTermNode:
         if impType is None: self.impType = ImpType()
         else: self.impType = impType  # type of implicative
         self.impSign = None   # sign of implicative
-        self.note = note     # note: "at-most", "at-least", "at-most-N", "at-least-N"
+        self.note = note      # note: "at-most", "at-least", "at-most-N", "at-least-N"
+        self.number = number  # sg = singular, pl = plural
     def copy(self):
         cat = copy.deepcopy(self.cat)  # recursively create new copy
         newNode = NonTermNode(self.depth, cat, self.ruleType, self.wholeStr)
@@ -2994,20 +3112,38 @@ class Cat:
             self.semCat = SemCat(**{'semCatStr':'pp'})
 
         elif self.typeWOfeats.upper() == 'CONJ': # TODO
-            if self.word.upper() == 'AND': # TODO and is +?
+            if self.word is None: pass
+            elif self.word.upper() == 'AND': # TODO and is +?
                 self.semCat = SemCat(**{'semCatStr':'CONJ','marking':'+'})
             elif self.word.upper() == 'OR':  # TODO +?
                 self.semCat = SemCat(**{'semCatStr':'CONJ','marking':'+'})
             elif self.word.upper() == 'BUT':
                 self.semCat = SemCat(**{'semCatStr':'CONJ','marking':'+'})
-            else:
-                raise ErrorCat('unable to create semCat for conjunction {}'.format(self.word))
+            else:  # sometimes "if" is tagged as a conjunction
+                self.semCat = SemCat(**{'semCatStr':'CONJ','marking':'+'})
+            #else:
+            #    raise ErrorCat('unable to create semCat for conjunction {}'.format(self.word))
 
         elif self.typeWOfeats.upper() == 'PR':  # preposition
             self.semCat = SemCat(**{'semCatStr':'pr'})
 
         elif self.typeWOfeats.upper() == ':':
             self.semCat = SemCat(**{'semCatStr':':'})
+
+        elif self.typeWOfeats.upper() == 'LQU':
+            self.semCat = SemCat(**{'semCatStr':'LQU'})
+
+        elif self.typeWOfeats.upper() == 'RQU':
+            self.semCat = SemCat(**{'semCatStr':'RQU'})
+        
+        elif self.typeWOfeats.upper() == 'RRB':
+            self.semCat = SemCat(**{'semCatStr':'RRB'})
+
+        elif self.typeWOfeats.upper() == 'LRB':
+            self.semCat = SemCat(**{'semCatStr':'LRB'})
+
+        elif self.typeWOfeats.upper() == ';':
+            self.semCat = SemCat(**{'semCatStr':';'})
 
         else:
             self.semCat = SemCat()
@@ -3099,11 +3235,13 @@ class Cat:
         self.left = Cat(self.left, self.word)  # recursively build Cat
         self.right = Cat(self.right, self.word)  # recursively build Cat
 
-        # if the word is 'who', then assign '+' to every slash TODO why???
+        # if the word is 'who', then assign '+' to every slash TODO why??? not now
         if (self.word is not None)\
                 and (self.word.upper() in {'WHO', 'THAT', 'WHICH'}):
             self.semCat = SemCat(**{'IN': self.right.semCat,
-                                    'OUT': self.left.semCat, 'marking':'+'})
+                                    'OUT': self.left.semCat})
+            # self.semCat = SemCat(**{'IN': self.right.semCat,
+            #                         'OUT': self.left.semCat, 'marking':'+'})
         else:
             self.semCat = SemCat(**{'IN': self.right.semCat,
                                     'OUT': self.left.semCat})

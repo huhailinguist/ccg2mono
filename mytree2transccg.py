@@ -11,7 +11,7 @@ TODO: what is transccg?
 
 __author__ = "Hai Hu"
 
-from getMono import CCGtree, CCGtrees, ErrorCCGtree, ErrorCompareSemCat, eprint
+from getMono import CCGtree, CCGtrees, ErrorCCGtree, ErrorCompareSemCat, eprint, ErrorCat
 import sys
 
 # <token start="0" span="1" pos="DT" chunk="I-NP" entity="O" cat="NP[nb]/N" id="t0_0" surf="Every" base="every" ETtype="None" polarity="None"/>
@@ -59,6 +59,7 @@ def convert2transccg(filename, parser, filename_log):
     
     if parser == 'easyccg':
         trees.readEasyccgStr(filename)  #('tmp.easyccg.parsed.txt')
+        raw_sentences = open(filename.replace(".easyccg.parsed.txt","") + ".tok.clean").readlines()
     elif parser == 'candc':
         trees.readCandCxml(filename)  #('tmp.candc.parsed.xml')
     else:
@@ -69,33 +70,55 @@ def convert2transccg(filename, parser, filename_log):
     # mark and polarize
     N_polar = 0
     N_unpolar = 0
-    # for idx, t in trees.trees.items():
+    N_unparsed = 0
+    fh_polarized_trees = open(filename + ".polarized", "w")
 
-    idx_cant_polarize = {}
-    for idx in trees.tree_idxs:
+    # sent_parsed = True
+
+    # idx_cant_polarize = {}
+    for idx in range(len(raw_sentences)):
         # build the tree here
-        t = trees.build_one_tree(idx, parser)
+        t = trees.build_one_tree(idx, parser, use_lemma=False)
 
-        # fix tree
-        t.fixQuantifier()
-        t.fixNot()
-        if parser == 'candc': t.fixRC()  # only fix RC for candc
+        if t in ["failed_to_parse", "parse_exception"]:  # easyccg failed to parse the sent
+            eprint('easyccg failed to parse the sent')
+            eprint(raw_sentences[idx])
+            sent = raw_sentences[idx].replace(" ", "= ").replace("\n", "=\n")  # = for every token
+            fh_polarized_trees.write(sent)
+            N_unparsed += 1
 
-        try:
-            t.mark()
-            t.polarize()
-            t.getImpSign()
-            N_polar += 1
-        except (ErrorCompareSemCat, ErrorCCGtree, AssertionError, AttributeError) as e:
-            eprint(e)
-            eprint('-- cannot polarize sent: ', end='')
-            N_unpolar += 1
-        t.printSent(stream=sys.stderr)
+        else:  # t is a tree
+            # fix tree
+            t.fixQuantifier()
+            try: t.fixNot()
+            except AttributeError: pass
+            if parser == 'candc': t.fixRC()  # only fix RC for candc
+
+            try:
+                t.mark()
+                t.polarize()
+                t.getImpSign()
+                N_polar += 1
+            except (ErrorCompareSemCat, ErrorCCGtree, AssertionError, AttributeError, ErrorCat) as e:
+                eprint(e)
+                eprint('-- cannot polarize sent: ', end='')
+                N_unpolar += 1
+            # t.printSent(stream=sys.stderr)
+            fh_polarized_trees.write(t.printSent_raw(stream=sys.stderr))
+            fh_polarized_trees.write("\n")
         eprint()
+    fh_polarized_trees.close()
+    eprint("\n\n===========\npolarized {} trees\n"
+           "unable to parse {} trees\n"
+           "unable to polarize {} trees".format(N_polar, N_unparsed, N_unpolar))
+
     # ----------------------------------
 
     print("""<?xml version='1.0' encoding='UTF-8'?>\n<root>\n<document>\n<sentences>""")
     for idx, t in trees.trees.items():
+        if t in ["failed_to_parse", "parse_exception"]:
+            continue
+
         print("<sentence>")
 
         # ----------------------------
@@ -129,14 +152,15 @@ def convert2transccg(filename, parser, filename_log):
         print("</sentence>")
 
     print("""</sentences>\n</document>\n</root>""")
-    eprint("\n\n===========\npolarized {} trees; "
-           "unable to polarize {} trees.".format(N_polar, N_unpolar))
+
 
 def traverse2get_span_id(node, counter, idx):
     '''
     traverse the tree to get span_id of all nodes (leaf + non term)
     '''
     counter += 1
+    if node is None: return  # why would this happen?
+
     # idx is the sentence idx
     if len(node.children) == 0:  # leaf
         node.span_id = 's' + str(idx) + '_sp' + str(counter)
