@@ -8,18 +8,28 @@ For example:
 
 - input sentence: No man who likes every dog sleeps. 
 
-- output: No&uarr; man&darr; who&darr; likes&darr; every&darr; dog&uarr; sleeps&darr; .&uarr;
+- output: No&uarr; man&darr; who&darr; likes&darr; every&darr; dog&uarr; sleeps&darr; .&uarr; (arrows on non-terminal nodes too)
 
 - visualized output:
 
 ![image](example.png)
 
+How it's done:
+
+- Input sentences are first parsed using any of the 3 CCG parsers (C&C, easyccg, depccg)
+- ccg2mono reads in the CCG parse and polarize using the algorithm described in this [paper](https://www.aclweb.org/anthology/S18-2015.pdf).
+- Visualize output using scripts from ccg2lambda.
+
+Caveats:
+
+- ccg2mono depends on the correctness of the CCG parse. If the parse is wrong, then the polarized sentence is almost certainly wrong. The above tree is parsed by easyccg, which is trained on the rebanked CCG and thus correctly parses the relative clause. C&C and depccg are trained on the original CCGbank and outputs wrong relative clauses: ((no man) (who likes every dog)). ccg2mono includes some functions to correct the parses, but cannot guarantee that all mistakes are corrected. So a good thing is to try all three parsers. 
+
 ## Preparation
 You need several things to run our program. **You can follow the commands [below](https://github.com/huhailinguist/ccg2mono#preparation-scripts).**
 
-0. Clone this repository to your computer. Have Python 3.5 installed. Install the `beautifulsoup4` python package; you can do `pip3 install beautifulsoup4` or `conda install beautifulsoup4` if you use anaconda. 
+1. Clone this repository to your computer. Have Python 3.5 installed. Install the `beautifulsoup4` python package; you can do `pip3 install beautifulsoup4` or `conda install beautifulsoup4` if you use anaconda. 
 
-1. Install C&C parser. 
+2. Install C&C parser. 
 All you need is download the precompiled binaries and the models 
 (models trained on CCGbank 02-21 and MUC 7, 50MB) from the [webpage](http://www.cl.cam.ac.uk/~sc609/candc-1.00.html). 
 
@@ -27,6 +37,8 @@ All you need is download the precompiled binaries and the models
 
 3. Install ccg2lambda system. You can simply clone [ccg2lambda](https://github.com/mynlp/ccg2lambda) 
 to your machine. 
+
+4. Install depccg parser. Follow instructions [here](https://github.com/masashi-y/depccg) or the commands [below](https://github.com/huhailinguist/ccg2mono#preparation-scripts).
 
 4. Install some more python packages (for visualizing trees in ccg2lambda) by 
 typing `pip3 install lxml simplejson pyyaml`.
@@ -43,41 +55,71 @@ Assume you are on mac or linux.
 
 ```bash
 mkdir ccg; cd ccg # make a directory to put all repositories
+
 # clone repos
 git clone https://github.com/huhailinguist/ccg2mono.git
 git clone https://github.com/mikelewis0/easyccg
 git clone https://github.com/mynlp/ccg2lambda
+
+# install depccg parser and spacy
+pip3 install cython numpy depccg spacy
+depccg_en download
+python -m spacy download en
+
 # download C&C binaries
 wget https://www.cl.cam.ac.uk/~sc609/resources/candc-downloads/candc-linux-1.00.tgz  # linux
 wget https://www.cl.cam.ac.uk/~sc609/resources/candc-downloads/candc-macosxu-1.00.tgz # mac
 tar zxvf candc-linux-1.00.tgz
+
 # download C&C models
 cd candc-1.00
 wget https://www.cl.cam.ac.uk/~sc609/resources/candc-downloads/models-1.02.tgz 
 tar zxvf models.-1.02.tgz
+
 # change scripts in ccg2lambda
 cp ccg2lambda/scripts/visualization_tools.py ccg2lambda/scripts/visualization_tools.bak.py 
 cp ccg2lambda/scripts/visualize.py ccg2lambda/scripts/visualize.bak.py 
 cp ccg2mono/files_for_ccg2lambda/visualization_tools.py ccg2lambda/scripts/
 cp ccg2mono/files_for_ccg2lambda/visualization_tools.py ccg2lambda/scripts/
-# install packages
+
+# install other packages
 pip3 install beautifulsoup4 lxml simplejson pyyaml
 ```
 
+In the end, you will have the following file structure:
 
-## Polarize
+```bash
+ccg
+|-- ccg2mono
+|  |-- src
+|-- ccg2lambda
+|-- candc-1.00
+|  |-- bin
+|  |-- models
+|-- easyccg
+```
 
-*src/parse.sh* is a shell script that does parsing, polarizing all together. 
+and also installed depccg. 
+
+## Usage
+
+### polarize and visualize
+
+`src/parse.sh` is a shell script that does parsing, polarizing and visualization all together. 
 
 ```bash
 ./parse.sh sentences.txt parser
 ```
 
-where parser can be: `candc` or `easyccg`.
+where parser can be: `candc`, `easyccg`, `depccg`.
 
-Depending on the parser you selected,  you will either see
-`sentences.txt.candc_pretty.html` or `sentences.txt.easyccg_pretty.html`, which is the polarized 
+Depending on the parser you selected,  you will see
+`sentences.txt.candc_pretty.html`, `sentences.txt.easyccg_pretty.html`
+or  `sentences.txt.depccg_pretty.html`, which is the polarized 
 output shown in the image above. 
+
+A text file containing polarized sentences will be saved to:
+`FILENAME.PARSER.parsed.(xml|txt).polarized`.
 
 ## Algorithm
 

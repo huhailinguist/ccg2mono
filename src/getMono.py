@@ -80,7 +80,7 @@ def main():
     parser.add_argument('-s', '--sentNo', dest='sentNo', type=str, nargs='+', default=['all'],
                         help='index(s) of sentence to process. E.g. "2", "3 5", "all" '
                              "[default: %(default)s]")
-    parser.add_argument('-p', dest='parser', default='candc', choices=['candc', 'easyccg'],
+    parser.add_argument('-p', dest='parser', default='candc', choices=['candc', 'easyccg', 'depccg'],
                         help='parser of your choice: candc, easyccg, depccg '
                              "[default: %(default)s]")
     parser.add_argument('-v', dest='verbose', choices=[-1,0,1,2,3,4], type=int, default=-1,
@@ -127,8 +127,8 @@ def main():
             args.parser = 'easyccg'
             trees.readEasyccgStr(args.filename, args.sentNo)
         elif '.depccg' in args.filename:
-            args.parser = 'depccg'  # same as easyccg
-            trees.readEasyccgStr(args.filename, args.sentNo)
+            args.parser = 'depccg'  # same as candc
+            trees.readCandCxml(args.filename, args.sentNo)
         else:
             eprint('parser not supported')
             exit()
@@ -355,7 +355,7 @@ class CCGtrees:
     def build_one_tree(self, idx, parser, use_lemma=True):
         # t = None
         eprint('building tree {}...'.format(idx))
-        if parser == 'candc':
+        if parser in ['candc', 'depccg']:
             t = CCGtree(ccgXml=self.CandC_xml[idx], changes=self.idx2change(idx))
         else:
             tree_str = self.easyccg_str.get(idx, None)

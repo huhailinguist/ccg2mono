@@ -129,13 +129,13 @@ elif [ $2 == "depccg" ]; then
     ./preprocess.py ${OUTname}.tok
 
     # parse to text file using depccg (with pos and ner from spacy)
-    cat ${OUTname}.tok.clean | depccg_en --annotator spacy > \
-    "${outputDir}/${OUTname}.depccg.parsed.txt"
+    cat ${OUTname}.tok.clean | depccg_en --annotator spacy -f xml > \
+    "${outputDir}/${OUTname}.depccg.parsed.xml"
 
     # output already has ( ), not { }
 
     # convert to transccg
-    ./mytree2transccg.py "${outputDir}/${OUTname}.depccg.parsed.txt" depccg  ${OUTname}.tok.preprocess.log \
+    ./mytree2transccg.py "${outputDir}/${OUTname}.depccg.parsed.xml" depccg  ${OUTname}.tok.preprocess.log \
     > ${outputDir}/${OUTname}.depccg2transccg.xml
 
     # convert to pretty html

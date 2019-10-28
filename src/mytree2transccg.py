@@ -63,9 +63,9 @@ def convert2transccg(filename, parser, filename_log):
     elif parser == 'candc':
         trees.readCandCxml(filename)  #('tmp.candc.parsed.xml')
         raw_sentences = open(filename.replace(".candc.parsed.xml","") + ".tok.clean").readlines()
-    elif parser == 'depccg':  # same as easyccg
-        trees.readEasyccgStr(filename)  #('tmp.easyccg.parsed.txt')
-        raw_sentences = open(filename.replace(".depccg.parsed.txt","") + ".tok.clean").readlines()
+    elif parser == 'depccg':  # same as candc
+        trees.readCandCxml(filename)  
+        raw_sentences = open(filename.replace(".depccg.parsed.xml","") + ".tok.clean").readlines()
     else:
         eprint('parser can only be: easyccg, candc, depccg')
         exit()
@@ -96,7 +96,7 @@ def convert2transccg(filename, parser, filename_log):
             t.fixQuantifier()
             try: t.fixNot()
             except AttributeError: pass
-            if parser == 'candc': t.fixRC()  # only fix RC for candc
+            if parser in ['candc', 'depccg']: t.fixRC()  # only fix RC for candc
 
             try:
                 t.mark()
