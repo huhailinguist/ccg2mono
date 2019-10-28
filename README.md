@@ -75,6 +75,7 @@ tar zxvf candc-linux-1.00.tgz
 cd candc-1.00
 wget https://www.cl.cam.ac.uk/~sc609/resources/candc-downloads/models-1.02.tgz 
 tar zxvf models.-1.02.tgz
+cd ..
 
 # change scripts in ccg2lambda
 cp ccg2lambda/scripts/visualization_tools.py ccg2lambda/scripts/visualization_tools.bak.py 
