@@ -15,7 +15,7 @@ For example:
 ![image](example.png)
 
 ## Preparation
-You need several things to run our program.
+You need several things to run our program. **You can follow the commands [below](https://github.com/huhailinguist/ccg2mono#preparation-scripts).**
 
 0. Clone this repository to your computer. Have Python 3.5 installed. Install the `beautifulsoup4` python package; you can do `pip3 install beautifulsoup4` or `conda install beautifulsoup4` if you use anaconda. 
 
@@ -36,6 +36,34 @@ typing `pip3 install lxml simplejson pyyaml`.
 6. Finally copy the paths of the above three programs (the CandC binaries and models, easyccg, and ccg2lambda) to *src/parse.sh* lines 27-31.
 
 Then you are ready to go. 
+
+## Preparation scripts
+
+Assume you are on mac or linux.
+
+```bash
+mkdir ccg; cd ccg # make a directory to put all repositories
+# clone repos
+git clone https://github.com/huhailinguist/ccg2mono.git
+git clone https://github.com/mikelewis0/easyccg
+git clone https://github.com/mynlp/ccg2lambda
+# download C&C binaries
+wget https://www.cl.cam.ac.uk/~sc609/resources/candc-downloads/candc-linux-1.00.tgz  # linux
+wget https://www.cl.cam.ac.uk/~sc609/resources/candc-downloads/candc-macosxu-1.00.tgz # mac
+tar zxvf candc-linux-1.00.tgz
+# download C&C models
+cd candc-1.00
+wget https://www.cl.cam.ac.uk/~sc609/resources/candc-downloads/models-1.02.tgz 
+tar zxvf models.-1.02.tgz
+# change scripts in ccg2lambda
+cp ccg2lambda/scripts/visualization_tools.py ccg2lambda/scripts/visualization_tools.bak.py 
+cp ccg2lambda/scripts/visualize.py ccg2lambda/scripts/visualize.bak.py 
+cp ccg2mono/files_for_ccg2lambda/visualization_tools.py ccg2lambda/scripts/
+cp ccg2mono/files_for_ccg2lambda/visualization_tools.py ccg2lambda/scripts/
+# install packages
+pip3 install beautifulsoup4 lxml simplejson pyyaml
+```
+
 
 ## Polarize
 

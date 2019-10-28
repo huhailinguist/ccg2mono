@@ -10,16 +10,16 @@
 #
 # Hai Hu, Feb 2018
 
+USEAGE="\nUsage: ./parse.sh sentences.txt parser (outputDir)\n
+      parser can only be: candc, easyccg, depccg (if using easyccg, outputFormat is 'extended')\n\n"
+
 if [ "$#" -le 1 ]; then
-    printf "\nUsage: ./parse.sh sentences.txt parser (outputDir)\n
-      parser: candc, easyccg (if using easyccg, outputFormat is 'extended')\n\n"
+    printf $USEAGE
     exit 1
 fi
 
-if [ $2 != "candc" ] && [ $2 != "easyccg" ]; then
-    printf "\nUsage: ./parse.sh sentences.txt parser (outputDir)\n
-      parser: candc, easyccg (if using easyccg, outputFormat is 'extended')
-      parser only has 2 options\n\n"
+if [ $2 != "candc" ] && [ $2 != "easyccg" ] && [ $2 != "depccg" ]; then
+    printf $USEAGE
     exit 1
 fi
 # -------------------------------------------------
@@ -76,7 +76,7 @@ if [ $2 == "candc" ]; then
     ${outputDir}/${OUTname}.candc2transccg.xml > \
     "${outputDir}/${OUTname}.candc_pretty.html"
 
-else
+elif [ $2 == "easyccg" ]; then
     ################  easyccg parser  ################
     printf "*** parsing using easyccg ***\n"
 
@@ -114,6 +114,38 @@ else
     ${ccg2lambdaDir}/scripts/visualize.py \
     ${outputDir}/${OUTname}.easyccg2transccg.xml > \
     ${outputDir}/${OUTname}.easyccg_pretty.html
+
+elif [ $2 == "depccg" ]; then
+    ################  depccg parser  ################
+    printf "*** parsing using depccg ***\n"
+
+    # tokenize, need to remove trailing space for each line:
+    # remove punctuations for depccg
+    printf "tokenizing...\n"
+    cat $1 | ./${ccg2lambdaDir}/en/tokenizer.sed | \
+    perl -pe 's/ \n/\n/g; s/ \.//g; s/ ,//g' > ${OUTname}.tok
+
+    # clean: at most n -> no, output file: ${OUTname}.tok.clean
+    ./preprocess.py ${OUTname}.tok
+
+    # parse to text file using depccg (with pos and ner from spacy)
+    cat ${OUTname}.tok.clean | depccg_en --annotator spacy > \
+    "${outputDir}/${OUTname}.depccg.parsed.txt"
+
+    # output already has ( ), not { }
+
+    # convert to transccg
+    ./mytree2transccg.py "${outputDir}/${OUTname}.depccg.parsed.txt" depccg  ${OUTname}.tok.preprocess.log \
+    > ${outputDir}/${OUTname}.depccg2transccg.xml
+
+    # convert to pretty html
+    ${ccg2lambdaDir}/scripts/visualize.py \
+    ${outputDir}/${OUTname}.depccg2transccg.xml > \
+    ${outputDir}/${OUTname}.depccg_pretty.html
+
+else
+
+    printf "parser not supported\ntry one of: candc, easyccg, depccg\n"
 
 fi
 

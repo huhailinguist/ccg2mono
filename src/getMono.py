@@ -81,7 +81,7 @@ def main():
                         help='index(s) of sentence to process. E.g. "2", "3 5", "all" '
                              "[default: %(default)s]")
     parser.add_argument('-p', dest='parser', default='candc', choices=['candc', 'easyccg'],
-                        help='parser of your choice: candc, easyccg '
+                        help='parser of your choice: candc, easyccg, depccg '
                              "[default: %(default)s]")
     parser.add_argument('-v', dest='verbose', choices=[-1,0,1,2,3,4], type=int, default=-1,
                         help='verbose: -1: None, 0: after reading in tree, '
@@ -123,9 +123,15 @@ def main():
         if '.candc.' in args.filename:
             args.parser = 'candc'
             trees.readCandCxml(args.filename, args.sentNo)
-        else:
+        elif '.easyccg' in args.filename:
             args.parser = 'easyccg'
             trees.readEasyccgStr(args.filename, args.sentNo)
+        elif '.depccg' in args.filename:
+            args.parser = 'depccg'  # same as easyccg
+            trees.readEasyccgStr(args.filename, args.sentNo)
+        else:
+            eprint('parser not supported')
+            exit()
     else:
         try:
             if args.parser == 'candc':
@@ -322,7 +328,9 @@ class CCGtrees:
         tree_id = 1
         for tree_str in easyccg_str:
             if tree_str.startswith('ID='):
-                tree_id = int(tree_str.strip()[3:]) - 1  # get ID
+                # depccg: ID=3, log probability=-2.5454466342926025
+                # easyccg: ID=3
+                tree_id = int(tree_str.strip().split(',')[0][3:]) - 1  # get ID
                 continue
             # counterSent += 1
             if treeIdxs:
@@ -342,7 +350,7 @@ class CCGtrees:
             #     tree = CCGtree(easyccg_tree_str=tree_str, changes=None)
             # self.trees[counterSent] = tree
 
-        eprint('\ntrees read in from easyccg output!\n\n')
+        eprint('\ntrees read in from easyccg/depccg output!\n\n')
 
     def build_one_tree(self, idx, parser, use_lemma=True):
         # t = None
