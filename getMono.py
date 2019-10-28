@@ -68,7 +68,6 @@ DE_PREP = {'OUTSIDE', 'WITHOUT', 'OUT', 'EXCEPT'}
 
 RC_PRON = {'WHO', 'WHICH', 'THAT'}
 
-
 def main():
     # -------------------------------------
     # parse cmd arguments
@@ -1066,13 +1065,18 @@ class CCGtree:
                 # if token.cat.semCat.semCatStr == '((e,t),((e,t),t))':
                 token.cat.semCat.marking = '-'
                 token.cat.semCat.OUT.marking = '-'
-            elif token.word.upper() in {'BOTH', 'EITHER', 'MOST', 'THE',
-                                        'THOSE', 'THESE'}:
+            elif token.word.upper() in {'BOTH', 'EITHER', 'MOST', 'THE', 'THOSE', 'THESE'}:
                 # TODO: restore 'MANY' here???
                 token.cat.semCat.OUT.marking = '+'
             elif token.word.upper() in {'NEITHER'}:
                 token.cat.semCat.OUT.marking = '-'
             # TODO other DTs: this, that?
+            # TODO(SST): is this right?! It seems like it should be '-' and
+            # '+', but when embedded under negative words, that gives the wrong
+            # results
+            elif token.word.upper() in {'ANY'}:
+                token.cat.semCat.marking = '+'
+                token.cat.semCat.OUT.marking = '+'
 
             elif token.pos.upper() == "PRP$":  # pos
                 token.cat.semCat.assignRecursive("+", EXCLUDE)
@@ -1194,7 +1198,7 @@ class CCGtree:
                         token.cat.semCat.assignRecursive("+", EXCLUDE)
 
 
-            # TODO model verbs
+            # TODO modal verbs
             elif token.pos.upper() == 'MD' and token.cat.typeWOfeats != 'N':
                 # can: (S\NP)/(S\NP)
                 token.cat.semCat.marking = '+'
