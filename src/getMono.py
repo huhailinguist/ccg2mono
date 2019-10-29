@@ -22,6 +22,7 @@ from sys import exit
 from bs4 import BeautifulSoup
 # from IPython.display import Markdown, display
 
+# TODO: standardize 'UP' and 'DOWN' instead of using those strings throughout
 # uparrow: U+2191, down arrow: U+2193
 
 __author__ = "Hai Hu; Larry Moss"
@@ -55,10 +56,13 @@ IMP_np = {"explain","guess","hesitate","mean","predict",
 # neutral: want to, from Nairn 2006
 IMP_px_nx = {"want"}
 
-QUANTIFIERS_TO_FIX = {
-    'MOST', 'MANY', 'FEW', 'SEVERAL', 'SOME-BUT-NOT-ALL',
-    'ONE', '2', '3', '4', '5', '6', '7', '8', '9', '10'
-}
+# QUANTIFIERS_TO_FIX = {
+#     'MOST', 'MANY', 'FEW', 'SEVERAL', 'SOME-BUT-NOT-ALL',
+#     'ONE', '2', '3', '4', '5', '6', '7', '8', '9', '10'
+# }  # old
+
+# NOTE (SS-T): taking 'many' out because so many occurrences of 'so many'
+QUANTIFIERS_TO_FIX = {'MOST', 'FEW', 'SEVERAL', 'ONE', '2', '3', '4', '5'}
 
 # TODO for all semCat, make everything + except NP, N, PP, PR, S
 EXCLUDE = {"((e,t),t)", "(e,t)", "t", "pp", "pr"}
@@ -68,7 +72,6 @@ EXCLUDE = {"((e,t),t)", "(e,t)", "t", "pp", "pr"}
 DE_PREP = {'WITHOUT'}  # except seems to be =
 
 RC_PRON = {'WHO', 'WHICH', 'THAT'}
-
 
 def main():
     # -------------------------------------
@@ -1130,6 +1133,7 @@ class CCGtree:
         for token in self.leafNodes:
             # -----------------------
             # quantifiers   TODO what if not of type NP/N
+            # # TODO (SST): MANY actually here? HH: MANY is only upward on second argument
             if token.word.upper() in {'SOME', 'A', 'AN', 'SEVERAL',
                                       'ONE',
                                       'SOME-BUT-NOT-ALL'}:  # + +
@@ -1137,7 +1141,9 @@ class CCGtree:
                 try:
                     token.cat.semCat.marking = '+'
                     token.cat.semCat.OUT.marking = '+'
-                except AttributeError: pass
+                except AttributeError:
+                    eprint('Attribute error')
+                    pass
             elif token.word.upper() in {'EVERY', 'ALL', 'EACH'}:  # - +
                 # if token.cat.semCat.semCatStr == '((e,t),((e,t),t))':
                 token.cat.semCat.marking = '-'
@@ -1146,7 +1152,8 @@ class CCGtree:
                 # if token.cat.semCat.semCatStr == '((e,t),((e,t),t))':
                 token.cat.semCat.marking = '-'
                 token.cat.semCat.OUT.marking = '-'
-            elif token.word.upper() in {'BOTH', 'EITHER', 'MANY', 'MOST', 'THE'}:
+            elif token.word.upper() in {'BOTH', 'EITHER', 'MOST', 'THE', 'THOSE', 'THESE'}:
+                # TODO: restore 'MANY' here???
                 token.cat.semCat.OUT.marking = '+'
             elif token.word.upper() in {'NEITHER'}:
                 token.cat.semCat.OUT.marking = '-'
@@ -1156,6 +1163,12 @@ class CCGtree:
                 token.cat.semCat.OUT.marking = None
 
             # TODO other DTs: this, that?
+            # TODO(SST): is this right?! It seems like it should be '-' and
+            # '+', but when embedded under negative words, that gives the wrong
+            # results
+            elif token.word.upper() in {'ANY'}:
+                token.cat.semCat.marking = '+'
+                token.cat.semCat.OUT.marking = '+'
 
             elif token.pos.upper() == "PRP$":  # pos
                 token.cat.semCat.assignRecursive("+", EXCLUDE)
@@ -1214,6 +1227,12 @@ class CCGtree:
                 token.cat.semCat.marking = '+'
                 token.cat.semCat.IN.marking = '+'
                 token.cat.semCat.IN.IN.marking = '+'
+
+            # TODO (SS-T): is this the right way of handling None?
+            elif token.word.upper() in {'NONE'}:
+                eprint('Labeling NONE')
+                token.cat.semCat.marking = "-"
+                token.cat.semCat.OUT.marking = '-'
             # TODO NNS, NN
             elif token.pos.upper().startswith("NN"):
                 token.cat.semCat.assignRecursive("+", EXCLUDE)
@@ -1278,7 +1297,7 @@ class CCGtree:
                         token.cat.semCat.assignRecursive("+", EXCLUDE)
 
 
-            # TODO model verbs
+            # TODO modal verbs
             elif token.pos.upper() == 'MD' and token.cat.typeWOfeats != 'N':
                 # can: (S\NP)/(S\NP)
                 token.cat.semCat.marking = '+'
@@ -3113,7 +3132,7 @@ class Cat:
                 and (self.word.upper() in {'WHO', 'THAT', 'WHICH'}):
                 self.semCat = SemCat(**{'IN': IN, 'OUT': OUT, 'marking': '+'})
 
-        elif self.typeWOfeats.upper() in ['.', ',']:  # punctuation
+        elif self.typeWOfeats.upper() in ['.', ',', ';']:  # punctuation
             self.semCat = SemCat()
 
         elif self.typeWOfeats.upper() == 'PP': # TODO
