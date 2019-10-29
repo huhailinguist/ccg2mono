@@ -10,16 +10,16 @@
 #
 # Hai Hu, Feb 2018
 
-USEAGE="\nUsage: ./parse.sh sentences.txt parser (outputDir)\n
+USAGE="\nUsage: ./parse.sh sentences.txt parser (outputDir)\n
       parser can only be: candc, easyccg, depccg (if using easyccg, outputFormat is 'extended')\n\n"
 
 if [ "$#" -le 1 ]; then
-    printf $USEAGE
+    printf "$USAGE"
     exit 1
 fi
 
 if [ $2 != "candc" ] && [ $2 != "easyccg" ] && [ $2 != "depccg" ]; then
-    printf $USEAGE
+    printf "$USAGE"
     exit 1
 fi
 # -------------------------------------------------

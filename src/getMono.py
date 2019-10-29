@@ -1152,7 +1152,7 @@ class CCGtree:
                 # if token.cat.semCat.semCatStr == '((e,t),((e,t),t))':
                 token.cat.semCat.marking = '-'
                 token.cat.semCat.OUT.marking = '-'
-            elif token.word.upper() in {'BOTH', 'EITHER', 'MOST', 'THE', 'THOSE', 'THESE', 'MANY'}:
+            elif token.word.upper() in {'BOTH', 'EITHER', 'MOST', 'THE', 'THOSE', 'THESE', 'MANY', 'THIS', 'THAT'}:
                 # TODO: restore 'MANY' here??? HH: Yes!
                 token.cat.semCat.OUT.marking = '+'
             elif token.word.upper() in {'NEITHER'}:
