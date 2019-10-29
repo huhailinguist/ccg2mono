@@ -1133,7 +1133,7 @@ class CCGtree:
         for token in self.leafNodes:
             # -----------------------
             # quantifiers   TODO what if not of type NP/N
-            # # TODO (SST): MANY actually here? HH: MANY is only upward on second argument
+            # # TODO (SST): MANY actually here? HH: MANY with BOTH, MOST, THE ...
             if token.word.upper() in {'SOME', 'A', 'AN', 'SEVERAL',
                                       'ONE',
                                       'SOME-BUT-NOT-ALL'}:  # + +
@@ -1153,7 +1153,7 @@ class CCGtree:
                 token.cat.semCat.marking = '-'
                 token.cat.semCat.OUT.marking = '-'
             elif token.word.upper() in {'BOTH', 'EITHER', 'MOST', 'THE', 'THOSE', 'THESE', 'MANY'}:
-                # TODO: restore 'MANY' here???
+                # TODO: restore 'MANY' here??? HH: Yes!
                 token.cat.semCat.OUT.marking = '+'
             elif token.word.upper() in {'NEITHER'}:
                 token.cat.semCat.OUT.marking = '-'
