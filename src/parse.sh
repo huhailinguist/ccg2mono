@@ -128,8 +128,8 @@ elif [ $2 == "depccg" ]; then
     # clean: at most n -> no, output file: ${OUTname}.tok.clean
     ./preprocess.py ${OUTname}.tok
 
-    # parse to text file using depccg (with pos and ner from spacy)
-    cat ${OUTname}.tok.clean | depccg_en --annotator spacy -f xml > \
+    # parse to text file using depccg (now using rebanked CCG model)
+    cat ${OUTname}.tok.clean | python -m depccg en --model elmo_rebank -f xml > \
     "${outputDir}/${OUTname}.depccg.parsed.xml"
 
     # output already has ( ), not { }

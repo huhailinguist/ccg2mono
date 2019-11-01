@@ -22,7 +22,8 @@ How it's done:
 
 Caveats:
 
-- ccg2mono depends on the correctness of the CCG parse. If the parse is wrong, then the polarized sentence is almost certainly wrong. The above tree is parsed by easyccg, which is trained on the rebanked CCG and thus correctly parses the relative clause. C&C and depccg are trained on the original CCGbank and outputs wrong relative clauses: ((no man) (who likes every dog)). ccg2mono includes some functions to correct the parses, but cannot guarantee that all mistakes are corrected. So a good thing is to try all three parsers. 
+- `ccg2mono` depends on the correctness of the CCG parse. If the parse is wrong, then the polarized sentence is almost certainly wrong. The above tree is parsed by easyccg, which is trained on the rebanked CCG and thus correctly parses the relative clause. `C&C` is trained on the original CCGbank and outputs wrong relative clauses: ((no man) (who likes every dog)). `ccg2mono` includes some functions to correct the parses, but cannot guarantee that all mistakes are corrected. So a good thing is to try all three parsers. 
+- [new] Now thanks to Masashi, author of `depccg`, there is a `depccg` model trained on the rebanked CCG which produces correct parses for relative clauses. `ccg2mono` automatically calls the rebanked model both in `depccg` and `easyCCG` and we thus recommend you use these two parsers. 
 
 ## Preparation
 You need several things to run our program. **You can follow the commands [below](https://github.com/huhailinguist/ccg2mono#preparation-scripts).**
@@ -61,10 +62,11 @@ git clone https://github.com/huhailinguist/ccg2mono.git
 git clone https://github.com/mikelewis0/easyccg
 git clone https://github.com/mynlp/ccg2lambda
 
-# install depccg parser and spacy
+# install depccg parser and its dependencies
 pip3 install cython numpy depccg spacy
-depccg_en download
 python -m spacy download en
+pip3 install allennlp  # for elmo
+depccg_en download elmo_rebank  # for the rebanked model in depccg
 
 # download C&C binaries
 wget https://www.cl.cam.ac.uk/~sc609/resources/candc-downloads/candc-linux-1.00.tgz  # linux
@@ -81,7 +83,7 @@ cd ..
 cp ccg2lambda/scripts/visualization_tools.py ccg2lambda/scripts/visualization_tools.bak.py 
 cp ccg2lambda/scripts/visualize.py ccg2lambda/scripts/visualize.bak.py 
 cp ccg2mono/files_for_ccg2lambda/visualization_tools.py ccg2lambda/scripts/
-cp ccg2mono/files_for_ccg2lambda/visualization_tools.py ccg2lambda/scripts/
+cp ccg2mono/files_for_ccg2lambda/visualize.py ccg2lambda/scripts/
 
 # install other packages
 pip3 install beautifulsoup4 lxml simplejson pyyaml
