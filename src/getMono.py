@@ -130,8 +130,8 @@ def main():
             args.parser = 'easyccg'
             trees.readEasyccgStr(args.filename, args.sentNo)
         elif '.depccg' in args.filename:
-            args.parser = 'depccg'  # same as candc
-            trees.readCandCxml(args.filename, args.sentNo)
+            args.parser = 'depccg'  # same as easyccg
+            trees.readEasyccgStr(args.filename, args.sentNo)
         else:
             eprint('parser not supported')
             exit()
@@ -323,7 +323,7 @@ class CCGtrees:
         eprint('\ntrees read in from candc output!\n\n')
 
     def readEasyccgStr(self, easyccg_fn, treeIdxs=None):  # treeIdx starts at 0
-        eprint('reading trees from easyccg output ...')
+        eprint('reading trees from easyccg / depccg output ...')
         easyccg_str = open(easyccg_fn).readlines()
 
         # for each tree
@@ -343,7 +343,7 @@ class CCGtrees:
             #### build the tree  ####
             # eprint('reading tree {}...'.format(counterSent))
             if tree_str == "\n":  # easyccg failed to parse this sentence
-                eprint("- easyccg failed to parse sent {}".format(counterSent))
+                eprint("- easyccg / depccg failed to parse sent {}".format(counterSent))
                 tree_str = "failed_to_parse"
             self.easyccg_str[tree_id] = tree_str
             self.tree_idxs.append(tree_id)
@@ -353,12 +353,12 @@ class CCGtrees:
             #     tree = CCGtree(easyccg_tree_str=tree_str, changes=None)
             # self.trees[counterSent] = tree
 
-        eprint('\ntrees read in from easyccg/depccg output!\n\n')
+        eprint('\ntrees read in from easyccg / depccg output!\n\n')
 
     def build_one_tree(self, idx, parser, use_lemma=True):
         # t = None
         eprint('building tree {}...'.format(idx))
-        if parser in ['candc', 'depccg']:
+        if parser in ['candc']:
             t = CCGtree(ccgXml=self.CandC_xml[idx], changes=self.idx2change(idx))
         else:
             tree_str = self.easyccg_str.get(idx, None)
@@ -519,7 +519,9 @@ class CCGtree:
         """ print sent word by word, not lemma by lemma """
         s = ''
         for lfnode in self.leafNodes:
-            s += '{}{} '.format(lfnode.word_raw, lfnode.cat.monotonicity)
+            if lfnode.cat.monotonicity is None: mono = '\u2193'
+            else: mono = lfnode.cat.monotonicity 
+            s += '{}{} '.format(lfnode.word_raw, mono)
         s = s.replace('DOWN', '\u2193').replace('UP', '\u2191').\
               replace('UNK', '=')
         print(s, file=stream)
@@ -1141,9 +1143,10 @@ class CCGtree:
                 try:
                     token.cat.semCat.marking = '+'
                     token.cat.semCat.OUT.marking = '+'
+                    if token.cat.typeWOfeats != r"NP/N":
+                        token.cat.semCat.assignRecursive("+", EXCLUDE)
                 except AttributeError:
                     eprint('Attribute error')
-                    pass
             elif token.word.upper() in {'EVERY', 'ALL', 'EACH'}:  # - +
                 # if token.cat.semCat.semCatStr == '((e,t),((e,t),t))':
                 token.cat.semCat.marking = '-'
@@ -1157,8 +1160,9 @@ class CCGtree:
                 token.cat.semCat.OUT.marking = '+'
             elif token.word.upper() in {'NEITHER'}:
                 token.cat.semCat.OUT.marking = '-'
-            elif token.word.upper() in {'2', '3', '4', '5', '6', '7', '8', '9', '10'}:
-                # = =
+            elif token.word.upper() in {'2', '3', '4', '5', '6', '7', '8', '9', '10'} and \
+                token.cat.typeWOfeats in {r'NP/N', r'N/N'}:
+                # = =                     NP/N = I have 3 apples, N/N = at most 3 apples
                 token.cat.semCat.marking = None
                 token.cat.semCat.OUT.marking = None
 
@@ -1166,9 +1170,11 @@ class CCGtree:
             # TODO(SST): is this right?! It seems like it should be '-' and
             # '+', but when embedded under negative words, that gives the wrong
             # results
-            elif token.word.upper() in {'ANY'}:
+            elif token.word.upper() in {'ANY'}:  # this is the existential any
                 token.cat.semCat.marking = '+'
                 token.cat.semCat.OUT.marking = '+'
+            # universal any:
+            # -, +
 
             elif token.pos.upper() == "PRP$":  # pos
                 token.cat.semCat.assignRecursive("+", EXCLUDE)
@@ -1200,7 +1206,9 @@ class CCGtree:
             elif token.word.upper() in {'NOT', "N'T"}:  # N'T: (S\NP)\(S\NP)
                 token.cat.semCat.marking = '-'  # check semCatStr??
                 # TODO is this correct?
-                if token.cat.typeWOfeats != r"N/N":
+                if token.cat.typeWOfeats == r"NP/NP": # not every person
+                    token.cat.semCat.OUT.marking = '-'
+                elif token.cat.typeWOfeats != r"N/N":
                     token.cat.semCat.OUT.marking = '+'
                     token.cat.semCat.IN.marking = '+'
                     # token.cat.semCat.OUT.IN.marking = '+'  # (S+\NP+)-\(S+\NP)
@@ -1255,8 +1263,26 @@ class CCGtree:
             elif token.word.upper() in ['THAT', 'WHO', 'WHICH'] and \
                     (token.pos in ['WDT', 'IN', 'WP']):
                 # !! already handled in Cat() !! modified #
+                token.cat.semCat.marking = '+'
+                token.cat.semCat.OUT.marking = '+'
+                # token.cat.semCat.OUT.assignRecursive("+", EXCLUDE)
+
+            # possessive 's
+            elif token.word.upper() == "'S" and token.pos == "POS":
+                # (NP/+N)\+NP
+                token.cat.semCat.marking = '+'
+                token.cat.semCat.OUT.marking = '+'
+
+            # except
+            elif token.word.upper() == "EXCEPT":
+                # (N\+N)/.NP, pos = IN: all students except engineers
+                token.cat.semCat.marking = None
+                token.cat.semCat.OUT.marking = "+"
+
+            # cardinals
+            elif token.pos.upper() == "CD": # and token.cat.typeWOfeats == r'(S\NP)\(S\NP)':
+                # you can smoke *2* a day
                 token.cat.semCat.assignRecursive("+", EXCLUDE)
-                pass
 
             # TODO verbs
             elif token.pos.upper().startswith('VB'):
@@ -2194,8 +2220,7 @@ class CCGtree:
         try: assert easyccg_tree_str.count('{') == easyccg_tree_str.count('}')
         except AssertionError:
             eprint('unequal num of { and }\n#{: %s, #}: %s' %
-                  (easyccg_tree_str.count('{'),
-                  easyccg_tree_str.count('}')))
+                  (easyccg_tree_str.count('{'), easyccg_tree_str.count('}')))
             eprint(easyccg_tree_str)
             raise ErrorCCGtree("Error in build_easyccg()")
 
@@ -2370,7 +2395,7 @@ class CCGtree:
             elif change['before'] == "a-lot-of":
                 self.recover_a_lot_of()  # TODO
             else:
-                eprint("something wrong in changes for sentence:")
+                eprint("*** something wrong in changes for sentence:")
                 self.printSent()
                 return
 
@@ -3008,15 +3033,19 @@ class SemCat:
         else:
             self.semCatStr = '({},{})'.format(self.IN, self.OUT)
             self.semCatStr = self.semCatStr.replace('-','').replace('+','')
-    def assignRecursive(self, plusORminus, exclude):
+    def assignRecursive(self, plusORminus, exclude=None):
         ''' assign +/- recursively to every --> inside
         excluding semCat of the type in exclude '''
         self.assignRecursiveHelper(self, plusORminus, exclude)
-    def assignRecursiveHelper(self, semcat, plusORminus, exclude):
+    def assignRecursiveHelper(self, semcat, plusORminus, exclude=None):
         if semcat is None: return
         elif semcat.semCatStr in {"(e,t)", "e", "et"}: return
         else:
-            if semcat.semCatStr not in exclude:
+            if exclude is None:
+                semcat.marking = plusORminus
+                self.assignRecursiveHelper(semcat.IN, plusORminus, exclude)
+                self.assignRecursiveHelper(semcat.OUT, plusORminus, exclude)
+            elif semcat.semCatStr not in exclude:
                 semcat.marking = plusORminus
                 # print(semcat)
                 self.assignRecursiveHelper(semcat.IN, plusORminus, exclude)
@@ -3127,10 +3156,10 @@ class Cat:
             OUT = SemCat(**{'semCatStr':'t'})
             self.semCat = SemCat(**{'IN':IN,'OUT':OUT})
             # TODO relative pronoun 'that' should have NP+ in the last NP
-            # (NP\NP)/(S/NP+)
-            if (self.word is not None) \
-                and (self.word.upper() in {'WHO', 'THAT', 'WHICH'}):
-                self.semCat = SemCat(**{'IN': IN, 'OUT': OUT, 'marking': '+'})
+            # (NP\NP)/(S/NP+) or (N\N)/NP
+            # if (self.word is not None) \
+            #     and (self.word.upper() in {'WHO', 'THAT', 'WHICH'}):
+            #     self.semCat = SemCat(**{'IN': IN, 'OUT': OUT, 'marking': '+'})
 
         elif self.typeWOfeats.upper() in ['.', ',', ';']:  # punctuation
             self.semCat = SemCat()

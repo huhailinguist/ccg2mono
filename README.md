@@ -64,7 +64,7 @@ git clone https://github.com/mynlp/ccg2lambda
 
 # install depccg parser and its dependencies
 pip3 install cython numpy depccg spacy
-python -m spacy download en
+python -m spacy download en  # get POS and NER from spacy
 pip3 install allennlp  # for elmo
 depccg_en download elmo_rebank  # for the rebanked model in depccg
 

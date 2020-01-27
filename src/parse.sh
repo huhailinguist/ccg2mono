@@ -72,7 +72,7 @@ if [ $2 == "candc" ]; then
     ${outputDir}/${OUTname}.candc2transccg.xml
 
     # to html
-    python3 ${ccg2lambdaDir}/scripts/visualize.py \
+    python ${ccg2lambdaDir}/scripts/visualize.py \
     ${outputDir}/${OUTname}.candc2transccg.xml > \
     "${outputDir}/${OUTname}.candc_pretty.html"
 
@@ -85,7 +85,8 @@ elif [ $2 == "easyccg" ]; then
     # too many ways the punctuations can be combined in the tree
     printf "tokenizing...\n"
     cat $1 | ./${ccg2lambdaDir}/en/tokenizer.sed | \
-    perl -pe 's/ \n/\n/g; s/ \.//g; s/ ,//g' > ${OUTname}.tok
+    # perl -pe 's/ \n/\n/g; s/ \.//g; s/ ,//g' > ${OUTname}.tok  # remove ,
+    perl -pe 's/ \n/\n/g; s/ \.//g;' > ${OUTname}.tok  # don't remove ,
 
     # clean: at most n -> no, output file: ${OUTname}.tok.clean
     ./preprocess.py ${OUTname}.tok
@@ -111,7 +112,7 @@ elif [ $2 == "easyccg" ]; then
     > ${outputDir}/${OUTname}.easyccg2transccg.xml
 
     # convert to pretty html
-    ${ccg2lambdaDir}/scripts/visualize.py \
+    python ${ccg2lambdaDir}/scripts/visualize.py \
     ${outputDir}/${OUTname}.easyccg2transccg.xml > \
     ${outputDir}/${OUTname}.easyccg_pretty.html
 
@@ -129,17 +130,18 @@ elif [ $2 == "depccg" ]; then
     ./preprocess.py ${OUTname}.tok
 
     # parse to text file using depccg (now using rebanked CCG model)
-    cat ${OUTname}.tok.clean | python -m depccg en --model elmo_rebank -f xml > \
-    "${outputDir}/${OUTname}.depccg.parsed.xml"
+    cat ${OUTname}.tok.clean | python -m depccg en --model elmo_rebank -f auto_extended -a spacy > \
+    "${outputDir}/${OUTname}.depccg.parsed.txt"
 
-    # output already has ( ), not { }
+    # change ( ) to {} so we can easily find nodes from easyccg output; IMPORTANT!
+    sed -i -e 's/(</{</g; s/>)/>}/g; s/ )/ }/g' "${outputDir}/${OUTname}.depccg.parsed.txt"
 
     # convert to transccg
-    ./mytree2transccg.py "${outputDir}/${OUTname}.depccg.parsed.xml" depccg  ${OUTname}.tok.preprocess.log \
+    ./mytree2transccg.py "${outputDir}/${OUTname}.depccg.parsed.txt" depccg  ${OUTname}.tok.preprocess.log \
     > ${outputDir}/${OUTname}.depccg2transccg.xml
 
     # convert to pretty html
-    ${ccg2lambdaDir}/scripts/visualize.py \
+    python ${ccg2lambdaDir}/scripts/visualize.py \
     ${outputDir}/${OUTname}.depccg2transccg.xml > \
     ${outputDir}/${OUTname}.depccg_pretty.html
 

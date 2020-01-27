@@ -54,7 +54,8 @@ PAT_some_but_not_all = re.compile("[Ss]ome but not all")
 QUANTIFIERS = {
     "some", "no", "every", "all", "each",
     # "exactly",
-    "most", "many",
+    "most", 
+    # "many",
     "several", "few",
     # "more than", "less than", "at least", "at most",
     "some-but-not-all"
@@ -87,7 +88,7 @@ def preprocess(fn):
 
             # line = line.lower()
 
-            eprint('\nbefore :', line)
+            eprint('\nbefore:', line)
 
             # with passitve to active transformation
             # line = preprocess_line(line, fh_log, s_pattern, sent_id, p2a, corenlp)
@@ -161,10 +162,7 @@ def preprocess_line(line, fh_log, s_pattern, sent_id, p2a=None, corenlp=None):
     # else:  pass # TODO only pass2act if not "there be no"
 
     # ----------------------------------------------
-    # pass2act
-    #if any([p in line for p in PASS_PATTERN]):
-    #    if " by " not in line:
-    #        line += " by a thing"
+    # pass2actPAT_a_few
     #    line_old = line[:]
     #    line = p2a.pass2act(line).strip('. ')
     #    if line == line_old and line.endswith(" by a thing"):
@@ -217,6 +215,10 @@ def preprocess_line(line, fh_log, s_pattern, sent_id, p2a=None, corenlp=None):
         elif word.lower().startswith("exactly-"):
             new_line.append("some")
             fh_log.write(s_pattern.format(str(sent_id), word, "some", str(idx), len_sent))
+        # many -> most
+        # elif word.lower().startswith("many"):
+        #     new_line.append("every")
+        #     fh_log.write(s_pattern.format(str(sent_id), word, "every", str(idx), len_sent))
         else:
             new_line.append(word)
 
