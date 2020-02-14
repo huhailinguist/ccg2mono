@@ -32,7 +32,7 @@ You need several things to run our program. **You can follow the commands [below
 
 2. Install C&C parser. 
 All you need is download the precompiled binaries and the models 
-(models trained on CCGbank 02-21 and MUC 7, 50MB) from the [webpage](http://www.cl.cam.ac.uk/~sc609/candc-1.00.html). 
+(models trained on CCGbank 02-21 and MUC 7, 50MB) from the [webpage](http://www.cl.cam.ac.uk/~sc609/candc-1.00.html). **in case this fails, please go to this [page](https://github.com/valeriobasile/learningbyreading#installation-of-the-cc-tools-and-boxer) to install C&C tools.
 
 2. Install easyCCG parser. You can simply clone [easyCCG](https://github.com/mikelewis0/easyccg) to your machine. 
 
