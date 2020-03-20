@@ -124,7 +124,8 @@ elif [ $2 == "depccg" ]; then
     # remove punctuations for depccg
     printf "tokenizing...\n"
     cat $1 | ./${ccg2lambdaDir}/en/tokenizer.sed | \
-    perl -pe 's/ \n/\n/g; s/ \.//g; s/ ,//g' > ${OUTname}.tok
+    perl -pe 's/ \n/\n/g; s/ \.//g; s/ ,//g; s/\(/-LRB-/g; s/\)/-RRB-/g' > ${OUTname}.tok
+    # depccg does't change ( to -LRB-, so we manually do it here
 
     # clean: at most n -> no, output file: ${OUTname}.tok.clean
     ./preprocess.py ${OUTname}.tok
