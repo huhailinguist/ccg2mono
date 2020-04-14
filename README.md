@@ -23,7 +23,8 @@ How it's done:
 Caveats:
 
 - `ccg2mono` depends on the correctness of the CCG parse. If the parse is wrong, then the polarized sentence is almost certainly wrong. The above tree is parsed by easyccg, which is trained on the rebanked CCG and thus correctly parses the relative clause. `C&C` is trained on the original CCGbank and outputs wrong relative clauses: ((no man) (who likes every dog)). `ccg2mono` includes some functions to correct the parses, but cannot guarantee that all mistakes are corrected. So a good thing is to try all three parsers. 
-- [new] Now thanks to Masashi, author of `depccg`, there is a `depccg` model trained on the rebanked CCG which produces correct parses for relative clauses. `ccg2mono` automatically calls the rebanked model both in `depccg` and `easyCCG` and we thus recommend you use these two parsers. **Seems that `depccg` does not officially support MacOS, so for Mac users, we recommend `easyCCG`, but you need to install C&C too since `easyCCG` depends on its supertagger. For Linux users, please use `depccg`.**
+- [new] Now thanks to Masashi, author of `depccg`, there is a `depccg` model trained on the rebanked CCG which produces correct parses for relative clauses. `ccg2mono` automatically calls the rebanked model both in `depccg` and `easyCCG` and we thus recommend you use these two parsers. 
+- **Seems that `depccg` does not officially support MacOS, so for Mac users, we recommend `easyCCG`, but you need to install C&C too since `easyCCG` depends on its supertagger. For Linux users, we recommend `depccg`.**
 
 
 ## Preparation
@@ -130,7 +131,9 @@ A text file containing polarized sentences will be saved to:
 
 Our algorithm is described in this [paper](https://www.aclweb.org/anthology/S18-2015.pdf).
 
-## infer (deprecated; will be uploaded to another repository)
+## infer (deprecated)
+**please see the other repository: https://github.com/huhailinguist/monalog**
+
 *infer.py* first reads in 3 knowledge representations from the folder k:
 
 - pairs.txt: dog < animal, beat < touch, etc.
