@@ -23,7 +23,8 @@ How it's done:
 Caveats:
 
 - `ccg2mono` depends on the correctness of the CCG parse. If the parse is wrong, then the polarized sentence is almost certainly wrong. The above tree is parsed by easyccg, which is trained on the rebanked CCG and thus correctly parses the relative clause. `C&C` is trained on the original CCGbank and outputs wrong relative clauses: ((no man) (who likes every dog)). `ccg2mono` includes some functions to correct the parses, but cannot guarantee that all mistakes are corrected. So a good thing is to try all three parsers. 
-- [new] Now thanks to Masashi, author of `depccg`, there is a `depccg` model trained on the rebanked CCG which produces correct parses for relative clauses. `ccg2mono` automatically calls the rebanked model both in `depccg` and `easyCCG` and we thus recommend you use these two parsers. 
+- [new] Now thanks to Masashi, author of `depccg`, there is a `depccg` model trained on the rebanked CCG which produces correct parses for relative clauses. `ccg2mono` automatically calls the rebanked model both in `depccg` and `easyCCG` and we thus recommend you use these two parsers. **Seems that `depccg` does not officially support MacOS, so for Mac users, we recommend `easyCCG`, but you need to install C&C too since `easyCCG` depends on its supertagger. For Linux users, please use `depccg`.**
+
 
 ## Preparation
 You need several things to run our program. **You can follow the commands [below](https://github.com/huhailinguist/ccg2mono#preparation-scripts).**
@@ -34,7 +35,7 @@ You need several things to run our program. **You can follow the commands [below
 All you need is download the precompiled binaries and the models 
 (models trained on CCGbank 02-21 and MUC 7, 50MB) from the [webpage](http://www.cl.cam.ac.uk/~sc609/candc-1.00.html). **in case this fails, please go to this [page](https://github.com/valeriobasile/learningbyreading#installation-of-the-cc-tools-and-boxer) to install C&C tools.
 
-2. Install easyCCG parser. You can simply clone [easyCCG](https://github.com/mikelewis0/easyccg) to your machine. 
+2. Install easyCCG parser. You can simply clone [easyCCG](https://github.com/mikelewis0/easyccg) to your machine. Then you need to download the easyccg model (must be the `rebank` model) from [here](https://drive.google.com/drive/u/0/folders/0B7AY6PGZ8lc-NGVOcUFXNU5VWXc) to your easyccg directory. Unpack the model into your easyccg directory. 
 
 3. Install ccg2lambda system. You can simply clone [ccg2lambda](https://github.com/mynlp/ccg2lambda) 
 to your machine. 
@@ -62,17 +63,18 @@ git clone https://github.com/huhailinguist/ccg2mono.git
 git clone https://github.com/mikelewis0/easyccg
 git clone https://github.com/mynlp/ccg2lambda
 
+# download easyccg model from https://drive.google.com/drive/u/0/folders/0B7AY6PGZ8lc-NGVOcUFXNU5VWXc to the newly cloned easyccg directory. Unpack the model into the easyccg directory. 
+
 # install depccg parser and its dependencies
 pip3 install cython numpy depccg spacy
 python -m spacy download en  # get POS and NER from spacy
 pip3 install allennlp  # for elmo
 depccg_en download elmo_rebank  # for the rebanked model in depccg
 
-# download C&C binaries
+# download C&C binaries; this may not work! Please refer to step 2 above to install C&C
 wget https://www.cl.cam.ac.uk/~sc609/resources/candc-downloads/candc-linux-1.00.tgz  # linux
 wget https://www.cl.cam.ac.uk/~sc609/resources/candc-downloads/candc-macosxu-1.00.tgz # mac
 tar zxvf candc-linux-1.00.tgz
-
 # download C&C models
 cd candc-1.00
 wget https://www.cl.cam.ac.uk/~sc609/resources/candc-downloads/models-1.02.tgz 
